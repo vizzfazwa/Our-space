@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Message History — Our Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Fraunces:wght@600;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0908;
+    --ink-2:#131110;
+    --paper:#eae3d2;
+    --paper-dim:rgba(234,227,210,0.55);
+    --paper-faint:rgba(234,227,210,0.12);
+    --brass:#c9a227;
+    --rose:#c9707a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--ink);height:100%;}
+  body{
+    color:var(--paper);
+    font-family:'Space Mono',monospace;
+    display:flex;flex-direction:column;
+    min-height:100vh;
+  }
+  /* scanlines */
+  body::before{
+    content:'';
+    position:fixed;inset:0;z-index:5;pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.02) 0px,
+      rgba(255,255,255,0.02) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode:overlay;
+  }
+
+  .topbar{
+    position:sticky;top:0;z-index:10;
+    background:rgba(10,9,8,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--paper-faint);
+    padding:16px 18px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .back{
+    color:var(--paper-dim);
+    text-decoration:none;
+    font-size:0.72rem;
+    letter-spacing:0.05em;
+  }
+  .back:hover{color:var(--brass);}
+  .title{
+    font-size:0.72rem;
+    letter-spacing:0.1em;
+    color:var(--brass);
+  }
+  .title::before{content:'● '; color:#7a5f18;}
+
+  .controls{
+    position:sticky;top:49px;z-index:9;
+    background:rgba(10,9,8,0.92);
+    backdrop-filter:blur(6px);
+    padding:10px 18px 14px;
+    border-bottom:1px solid var(--paper-faint);
+  }
+  #searchInput{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid var(--paper-faint);
+    color:var(--paper);
+    font-family:'Space Mono',monospace;
+    font-size:0.8rem;
+    padding:10px 12px;
+    outline:none;
+  }
+  #searchInput:focus{border-color:var(--brass);}
+  #searchInput::placeholder{color:var(--paper-dim);}
+  .filters{
+    display:flex;flex-wrap:wrap;gap:6px;
+    margin-top:10px;
+  }
+  .chip{
+    font-family:'Space Mono',monospace;
+    font-size:0.65rem;
+    letter-spacing:0.04em;
+    color:var(--paper-dim);
+    background:transparent;
+    border:1px solid var(--paper-faint);
+    padding:6px 10px;
+    cursor:pointer;
+  }
+  .chip.active{
+    color:var(--ink);
+    background:var(--brass);
+    border-color:var(--brass);
+  }
+
+  main{
+    flex:1;
+    padding:20px 16px 40px;
+    max-width:640px;
+    width:100%;
+    margin:0 auto;
+  }
+  .status{
+    color:var(--paper-dim);
+    font-size:0.75rem;
+    padding:30px 4px;
+    text-align:center;
+    line-height:1.7;
+  }
+
+  .msg{
+    margin-bottom:22px;
+    animation:msgIn 0.35s ease both;
+  }
+  @keyframes msgIn{
+    from{opacity:0;transform:translateY(6px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .msg-meta{
+    display:flex;align-items:baseline;gap:10px;
+    margin-bottom:5px;
+    font-size:0.68rem;
+    letter-spacing:0.04em;
+  }
+  .msg-sender{font-weight:700;}
+  .msg-time{color:var(--paper-dim);}
+  .msg-body{
+    font-size:0.85rem;
+    line-height:1.6;
+    color:var(--paper);
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .msg-media{
+    margin-top:8px;
+  }
+  .thumb{
+    max-width:220px;max-height:220px;
+    border:1px solid var(--paper-faint);
+    cursor:pointer;
+    display:block;
+  }
+  .file-chip{
+    display:inline-flex;align-items:center;gap:8px;
+    border:1px solid var(--paper-faint);
+    padding:8px 12px;
+    font-size:0.72rem;
+    color:var(--paper-dim);
+    text-decoration:none;
+  }
+  .file-chip:hover{border-color:var(--brass);color:var(--brass);}
+
+  .voice-row{
+    display:flex;align-items:center;gap:10px;
+    border:1px solid var(--paper-faint);
+    padding:8px 12px;
+    width:fit-content;
+  }
+  .voice-btn{
+    background:none;border:none;color:var(--brass);
+    font-family:'Space Mono',monospace;
+    font-size:0.75rem;cursor:pointer;
+    letter-spacing:0.05em;
+  }
+  .voice-btn:disabled{opacity:0.5;cursor:default;}
+  .voice-status{font-size:0.65rem;color:var(--paper-dim);}
+
+  .viewer{
+    position:fixed;inset:0;z-index:100;
+    background:rgba(0,0,0,0.94);
+    display:none;
+    align-items:center;justify-content:center;
+    padding:24px;
+  }
+  .viewer.open{display:flex;}
+  .viewer img, .viewer video{
+    max-width:100%;max-height:100%;
+  }
+  .viewer-close{
+    position:absolute;top:20px;right:20px;
+    background:none;border:1px solid var(--paper-faint);
+    color:var(--paper);
+    font-family:'Space Mono',monospace;
+    font-size:0.8rem;
+    padding:8px 12px;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="back" href="index.html">← BACK</a>
+  <span class="title">MESSAGE_HISTORY.LOG</span>
+  <span style="width:52px;"></span>
+</header>
+
+<div class="controls">
+  <input id="searchInput" type="text" placeholder="search messages...">
+  <div class="filters" id="filters"></div>
+</div>
+
+<main id="log">
+  <div class="status" id="status">loading archive…</div>
+</main>
+
+<div class="viewer" id="viewer">
+  <button class="viewer-close" id="viewerClose">CLOSE ✕</button>
+  <div id="viewerContent"></div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// ---- config (public anon key — safe to expose client-side) ----
+const SUPABASE_URL = 'https://qrtzkmbdjuubzegcuadu.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_VtUutzytoRnAxrjy5NblhA_r_b2YQAB';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const SENDER_COLORS = ['#c9a227', '#c9707a', '#7fa88a', '#7f9cc9'];
+function senderColor(sender){
+  const list = [...new Set(allMessages.map(m => (m.sender || '').toLowerCase()))].sort();
+  const idx = list.indexOf((sender || '').toLowerCase());
+  return SENDER_COLORS[idx % SENDER_COLORS.length] || 'var(--paper)';
+}
+
+let allMessages = [];
+let activeFilter = 'all';
+let searchTerm = '';
+
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+const filtersEl = document.getElementById('filters');
+const searchInput = document.getElementById('searchInput');
+const viewer = document.getElementById('viewer');
+const viewerContent = document.getElementById('viewerContent');
+document.getElementById('viewerClose').onclick = () => { viewer.classList.remove('open'); viewerContent.innerHTML=''; };
+viewer.addEventListener('click', e => { if(e.target === viewer){ viewer.classList.remove('open'); viewerContent.innerHTML=''; }});
+
+function fmtTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  const date = d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  const time = d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  return `${date} · ${time}`;
+}
+
+function buildFilters(){
+  const senders = [...new Set(allMessages.map(m => m.sender).filter(Boolean))];
+  const chips = ['all', ...senders, 'image', 'video', 'voice', 'file'];
+  const labels = { all:'ALL', image:'IMAGES', video:'VIDEOS', voice:'VOICE', file:'FILES' };
+  filtersEl.innerHTML = '';
+  chips.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (c === activeFilter ? ' active' : '');
+    btn.textContent = labels[c] || c.toUpperCase();
+    btn.onclick = () => { activeFilter = c; render(); };
+    filtersEl.appendChild(btn);
+  });
+}
+
+function matchesFilter(m){
+  if(activeFilter === 'all') return true;
+  if(activeFilter === 'image') return m.media_type === 'image';
+  if(activeFilter === 'video') return m.media_type === 'video';
+  if(activeFilter === 'voice') return !!m.has_voice;
+  if(activeFilter === 'file') return m.media_type && !['image','video'].includes(m.media_type);
+  return (m.sender || '').toLowerCase() === activeFilter.toLowerCase();
+}
+
+function matchesSearch(m){
+  if(!searchTerm) return true;
+  return (m.text_reply || '').toLowerCase().includes(searchTerm);
+}
+
+async function openImage(url){
+  viewerContent.innerHTML = `<img src="${url}" alt="">`;
+  viewer.classList.add('open');
+}
+async function openVideo(url){
+  viewerContent.innerHTML = `<video src="${url}" controls autoplay></video>`;
+  viewer.classList.add('open');
+}
+
+async function playVoice(id, btn, statusSpan){
+  btn.disabled = true;
+  statusSpan.textContent = 'loading…';
+  const { data, error } = await supabase
+    .from('messages_archive')
+    .select('voice_data')
+    .eq('id', id)
+    .single();
+  if(error || !data?.voice_data){
+    statusSpan.textContent = 'unavailable';
+    btn.disabled = false;
+    return;
+  }
+  const audio = new Audio(data.voice_data);
+  statusSpan.textContent = 'playing…';
+  audio.play();
+  audio.onended = () => { statusSpan.textContent = ''; btn.disabled = false; };
+}
+
+function renderMessage(m){
+  const wrap = document.createElement('div');
+  wrap.className = 'msg';
+
+  const meta = document.createElement('div');
+  meta.className = 'msg-meta';
+  const senderSpan = document.createElement('span');
+  senderSpan.className = 'msg-sender';
+  senderSpan.textContent = (m.sender || 'unknown').toUpperCase();
+  senderSpan.style.color = senderColor(m.sender);
+  const timeSpan = document.createElement('span');
+  timeSpan.className = 'msg-time';
+  timeSpan.textContent = fmtTime(m.created_at);
+  meta.appendChild(senderSpan);
+  meta.appendChild(timeSpan);
+  wrap.appendChild(meta);
+
+  if(m.text_reply){
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    body.textContent = m.text_reply;
+    wrap.appendChild(body);
+  }
+
+  if(m.media_url){
+    const mediaWrap = document.createElement('div');
+    mediaWrap.className = 'msg-media';
+    if(m.media_type === 'image'){
+      const img = document.createElement('img');
+      img.src = m.media_url; img.className = 'thumb'; img.loading = 'lazy';
+      img.onclick = () => openImage(m.media_url);
+      mediaWrap.appendChild(img);
+    } else if(m.media_type === 'video'){
+      const vid = document.createElement('video');
+      vid.src = m.media_url; vid.className = 'thumb'; vid.muted = true;
+      vid.onclick = () => openVideo(m.media_url);
+      mediaWrap.appendChild(vid);
+    } else {
+      const a = document.createElement('a');
+      a.href = m.media_url; a.target = '_blank'; a.rel = 'noopener';
+      a.className = 'file-chip';
+      a.textContent = '📎 ' + (m.media_name || 'file');
+      mediaWrap.appendChild(a);
+    }
+    wrap.appendChild(mediaWrap);
+  }
+
+  if(m.has_voice){
+    const row = document.createElement('div');
+    row.className = 'voice-row';
+    const btn = document.createElement('button');
+    btn.className = 'voice-btn';
+    btn.textContent = '▶ PLAY VOICE NOTE';
+    const status = document.createElement('span');
+    status.className = 'voice-status';
+    btn.onclick = () => playVoice(m.id, btn, status);
+    row.appendChild(btn);
+    row.appendChild(status);
+    wrap.appendChild(row);
+  }
+
+  return wrap;
+}
+
+function render(){
+  buildFilters();
+  const filtered = allMessages.filter(m => matchesFilter(m) && matchesSearch(m));
+  logEl.innerHTML = '';
+  if(filtered.length === 0){
+    const s = document.createElement('div');
+    s.className = 'status';
+    s.textContent = 'no messages found.';
+    logEl.appendChild(s);
+    return;
+  }
+  filtered.forEach(m => logEl.appendChild(renderMessage(m)));
+}
+
+searchInput.addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  render();
+});
+
+async function load(){
+  const { data, error } = await supabase
+    .from('messages_archive')
+    .select('id, sender, text_reply, has_voice, media_url, media_type, media_name, created_at')
+    .order('created_at', { ascending: true });
+
+  if(error){
+    statusEl.textContent = 'could not load archive — check connection.';
+    return;
+  }
+  allMessages = data || [];
+  render();
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+load();
+</script>
+</body>
+</html>
