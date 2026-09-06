@@ -345,7 +345,8 @@ async function loadMemories(){
     .order('memory_date', { ascending: true });
 
   if(error){
-    statusLine.textContent = 'could not load the calendar — check connection.';
+    console.error('calendar load error:', error);
+    statusLine.textContent = 'could not load: ' + (error.message || error.code || 'unknown error');
     allMemories = [];
   } else {
     allMemories = (data||[]).map(r => ({
@@ -630,7 +631,8 @@ document.getElementById('fSubmit').onclick = async () => {
 
   btn.disabled = false;
   if(error){
-    msg.textContent = 'could not save — try again.';
+    console.error('calendar insert error:', error);
+    msg.textContent = 'could not save: ' + (error.message || error.code || 'unknown error');
     return;
   }
   msg.textContent = '✓ added';
