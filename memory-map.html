@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Map — Our Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0c0a08;
+    --ink-2:#151210;
+    --paper:#f3ead6;
+    --paper-dim:rgba(243,234,214,0.55);
+    --paper-faint:rgba(243,234,214,0.16);
+    --brass:#c9a227;
+    --blue:#3d7bff;
+    --blue-glow:#8db4ff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--ink);}
+  body{
+    color:var(--paper);
+    font-family:'Space Mono',monospace;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(rgba(243,234,214,0.035) 1px, transparent 1px);
+    background-size:3px 3px;opacity:0.5;
+  }
+
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:rgba(10,9,8,0.92);backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--paper-faint);
+    padding:16px 18px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .back{color:var(--paper-dim);text-decoration:none;font-size:0.72rem;letter-spacing:0.05em;}
+  .back:hover{color:var(--brass);}
+  .g-title{font-family:'Fraunces',serif;font-weight:900;font-size:1.05rem;letter-spacing:0.01em;}
+
+  .page-head{text-align:center;padding:36px 20px 10px;position:relative;z-index:1;}
+  .page-head .icon{font-size:2rem;}
+  .page-head h1{font-family:'Fraunces',serif;font-weight:900;font-size:1.5rem;margin-top:8px;letter-spacing:0.01em;}
+  .page-head p{margin-top:6px;font-size:0.68rem;letter-spacing:0.12em;color:var(--blue-glow);}
+
+  .map-wrap{
+    position:relative;max-width:420px;margin:0 auto;padding:40px 24px 80px;
+    z-index:1;
+  }
+  .string-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+  .string-svg path{
+    fill:none;stroke:var(--blue);stroke-width:2;stroke-linecap:round;
+    filter:drop-shadow(0 0 2px rgba(61,123,255,0.5));
+    transition:filter 0.4s ease, stroke 0.4s ease;
+  }
+  .string-svg path.glow{stroke:var(--blue-glow);filter:drop-shadow(0 0 8px rgba(141,180,255,0.9));}
+
+  .nodes{position:relative;display:flex;flex-direction:column;gap:56px;}
+  .node{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    max-width:210px;cursor:pointer;
+    opacity:0;filter:blur(6px);transform:scale(0.85);
+    transition:opacity 0.7s ease, filter 0.7s ease, transform 0.7s cubic-bezier(.22,1,.36,1);
+  }
+  .node.pos-center{align-self:center;}
+  .node.pos-right{align-self:flex-end;}
+  .node.pos-left{align-self:flex-start;}
+  .node.revealed{opacity:1;filter:blur(0);transform:scale(1);}
+  .node .icon{
+    font-size:2.1rem;width:56px;height:56px;border-radius:50%;
+    background:var(--ink-2);border:2px solid var(--blue);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .node .headline{
+    font-family:'Fraunces',serif;font-weight:900;text-transform:uppercase;
+    font-size:0.92rem;text-align:center;line-height:1.3;letter-spacing:0.01em;
+  }
+  .node.anchor .icon{border-color:var(--brass);}
+  .node.anchor .headline{color:var(--brass);}
+
+  /* ---- click micro-animations ---- */
+  @keyframes anim-blink{0%,100%{transform:scaleY(1);}50%{transform:scaleY(0.15);}}
+  @keyframes anim-heartbeat{0%,100%{transform:scale(1);}20%{transform:scale(1.18);}40%{transform:scale(1);}60%{transform:scale(1.12);}80%{transform:scale(1);}}
+  @keyframes anim-bounce{0%,100%{transform:translateY(0);}30%{transform:translateY(-8px);}50%{transform:translateY(0);}70%{transform:translateY(-3px);}}
+  @keyframes anim-shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-5px);}40%{transform:translateX(5px);}60%{transform:translateX(-3px);}80%{transform:translateX(3px);}}
+  @keyframes anim-fade{0%,100%{opacity:1;}50%{opacity:0.35;}}
+  @keyframes anim-pop{0%,100%{transform:scale(1);}50%{transform:scale(1.25);}}
+  @keyframes anim-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+  .icon.anim-blink{animation:anim-blink 0.5s ease 2;}
+  .icon.anim-heartbeat{animation:anim-heartbeat 0.9s ease;}
+  .icon.anim-bounce{animation:anim-bounce 0.7s ease;}
+  .icon.anim-shake{animation:anim-shake 0.6s ease;}
+  .icon.anim-fade{animation:anim-fade 1.1s ease;}
+  .icon.anim-pop{animation:anim-pop 0.5s ease;}
+  .icon.anim-pulse{animation:anim-pulse 0.6s ease;}
+
+  .sparkle{
+    position:absolute;pointer-events:none;font-size:0.8rem;
+    animation:sparkleFly 0.9s ease forwards;
+  }
+  @keyframes sparkleFly{
+    0%{opacity:1;transform:translate(0,0) scale(1);}
+    100%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(0.3);}
+  }
+
+  .add-wrap{text-align:center;margin-top:20px;position:relative;z-index:1;}
+  .add-btn{
+    background:transparent;border:1px solid var(--blue);color:var(--blue-glow);
+    font-family:'Space Mono',monospace;font-size:0.75rem;letter-spacing:0.05em;
+    padding:14px 24px;cursor:pointer;
+  }
+  .add-btn:hover{background:rgba(61,123,255,0.1);}
+
+  .empty-note{text-align:center;color:var(--paper-dim);font-size:0.76rem;padding:30px 0;}
+
+  /* ---- add memory modal ---- */
+  .modal-panel{
+    position:fixed;inset:0;z-index:40;background:rgba(0,0,0,0.75);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-panel.open{display:flex;}
+  .modal{
+    background:var(--ink-2);border:1px solid var(--paper-faint);
+    width:100%;max-width:380px;padding:24px 20px;animation:modalIn 0.2s ease;
+  }
+  @keyframes modalIn{from{opacity:0;transform:scale(0.95);}to{opacity:1;transform:scale(1);}}
+  .modal h3{font-family:'Fraunces',serif;font-weight:900;font-size:1.05rem;text-align:center;margin-bottom:18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:0.64rem;letter-spacing:0.06em;color:var(--paper-dim);margin-bottom:6px;}
+  .field input[type=text]{
+    width:100%;background:transparent;border:1px solid var(--paper-faint);color:var(--paper);
+    font-family:'Space Mono',monospace;font-size:0.78rem;padding:10px;
+  }
+  .icon-grid{display:flex;flex-wrap:wrap;gap:6px;}
+  .icon-choice{
+    background:transparent;border:1px solid var(--paper-faint);font-size:1.1rem;
+    width:42px;height:42px;cursor:pointer;
+  }
+  .icon-choice.selected{border-color:var(--blue);background:rgba(61,123,255,0.12);}
+  .position-note{
+    font-size:0.68rem;color:var(--paper-dim);border:1px dashed var(--paper-faint);
+    padding:8px;text-align:center;letter-spacing:0.05em;
+  }
+  .modal-submit{
+    width:100%;background:var(--blue);color:#fff;border:none;
+    font-family:'Space Mono',monospace;font-weight:700;font-size:0.78rem;letter-spacing:0.04em;
+    padding:13px;cursor:pointer;margin-top:6px;
+  }
+  .modal-submit:disabled{opacity:0.5;}
+  .modal-cancel{
+    width:100%;background:none;border:none;color:var(--paper-dim);
+    font-family:'Space Mono',monospace;font-size:0.72rem;padding:10px;cursor:pointer;
+  }
+  .form-msg{font-size:0.7rem;color:var(--paper-dim);margin-top:6px;min-height:1em;text-align:center;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="back" href="index.html">← BACK</a>
+  <span class="g-title">MEMORY MAP</span>
+  <span style="width:52px;"></span>
+</header>
+
+<div class="page-head">
+  <div class="icon">🧠</div>
+  <h1>MEMORY MAP</h1>
+  <p>OUR STORY — ONE JOURNEY</p>
+</div>
+
+<div class="map-wrap" id="mapWrap">
+  <svg class="string-svg" id="stringSvg"><path id="stringPath" d=""></path></svg>
+  <div class="nodes" id="nodesEl"></div>
+</div>
+
+<div class="add-wrap">
+  <button class="add-btn" id="addBtn">＋ ADD MEMORY</button>
+</div>
+
+<div class="modal-panel" id="modalPanel">
+  <div class="modal">
+    <h3>＋ ADD MEMORY</h3>
+    <div class="field">
+      <label>HEADLINE</label>
+      <input type="text" id="fHeadline" placeholder="e.g. THE DAY WE MET AGAIN">
+    </div>
+    <div class="field">
+      <label>ICON</label>
+      <div class="icon-grid" id="iconGrid"></div>
+    </div>
+    <div class="field">
+      <label>POSITION</label>
+      <div class="position-note">AUTO — added to the end of the journey</div>
+    </div>
+    <button class="modal-submit" id="mSubmit">ADD MEMORY</button>
+    <button class="modal-cancel" id="mCancel">CANCEL</button>
+    <div class="form-msg" id="formMsg"></div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// memory map lives in the GALLERY project, same as calendar + letters
+const SUPABASE_URL = 'https://yesfebylerfhofhybtdp.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8rlJJfAHpciqCHvA1VmLAA_uWzj-p4w';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const ICON_CHOICES = ['❤️','👀','💬','✨','💔','🌙','📸','🎵','📖','⭐'];
+const ANIM_MAP = { '👀':'anim-blink', '❤️':'anim-heartbeat', '💬':'anim-bounce', '✨':'anim-sparkle', '💔':'anim-shake', '🌙':'anim-fade', '📸':'anim-pop' };
+
+const nodesEl = document.getElementById('nodesEl');
+const mapWrap = document.getElementById('mapWrap');
+const svg = document.getElementById('stringSvg');
+const path = document.getElementById('stringPath');
+
+let nodesData = [];
+
+async function loadNodes(){
+  const { data, error } = await supabase
+    .from('memory_map_nodes')
+    .select('id, headline, icon, order_index, is_anchor')
+    .order('order_index', { ascending: true });
+
+  if(error){
+    console.error('memory map load error:', error);
+    nodesEl.innerHTML = `<div class="empty-note">could not load: ${error.message||''}</div>`;
+    return;
+  }
+  nodesData = data || [];
+  renderNodes();
+}
+
+const POS_CLASSES = ['pos-left','pos-center','pos-right'];
+
+function renderNodes(){
+  nodesEl.innerHTML = '';
+  if(nodesData.length === 0){
+    nodesEl.innerHTML = `<div class="empty-note">The journey starts with your first memory.</div>`;
+    return;
+  }
+  nodesData.forEach((n, i) => {
+    const el = document.createElement('div');
+    el.className = 'node ' + POS_CLASSES[i%3] + (n.is_anchor ? ' anchor' : '');
+    el.dataset.icon = n.icon;
+    el.innerHTML = `
+      <div class="icon">${n.icon}</div>
+      <div class="headline">${escapeHtml(n.headline)}</div>
+    `;
+    el.addEventListener('click', () => triggerNodeAnim(el, n.icon));
+    nodesEl.appendChild(el);
+  });
+
+  // reveal-on-scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting) entry.target.classList.add('revealed');
+    });
+  }, { threshold: 0.35 });
+  nodesEl.querySelectorAll('.node').forEach(n => io.observe(n));
+
+  requestAnimationFrame(() => { drawString(); });
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---- draw the organic connecting string ----
+function drawString(){
+  const nodeEls = [...nodesEl.querySelectorAll('.node')];
+  if(nodeEls.length < 2){ path.setAttribute('d',''); return; }
+
+  const wrapRect = mapWrap.getBoundingClientRect();
+  const points = nodeEls.map(el => {
+    const r = el.querySelector('.icon').getBoundingClientRect();
+    return { x: r.left + r.width/2 - wrapRect.left, y: r.top + r.height/2 - wrapRect.top };
+  });
+
+  svg.setAttribute('viewBox', `0 0 ${wrapRect.width} ${mapWrap.scrollHeight}`);
+  svg.setAttribute('width', wrapRect.width);
+  svg.setAttribute('height', mapWrap.scrollHeight);
+
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for(let i=1;i<points.length;i++){
+    const p0 = points[i-1], p1 = points[i];
+    const midX = (p0.x + p1.x)/2 + (i%2===0 ? 26 : -26);
+    const midY = (p0.y + p1.y)/2;
+    d += ` Q ${midX} ${midY} ${p1.x} ${p1.y}`;
+  }
+  path.setAttribute('d', d);
+
+  const len = path.getTotalLength();
+  path.style.strokeDasharray = len;
+  path.style.strokeDashoffset = len;
+  updateStringDraw(len);
+}
+
+let pathLength = 0;
+function updateStringDraw(len){
+  pathLength = len || pathLength;
+  onScroll();
+}
+
+function onScroll(){
+  if(!pathLength) return;
+  const rect = mapWrap.getBoundingClientRect();
+  const progress = Math.min(1, Math.max(0, (window.innerHeight*0.85 - rect.top) / rect.height));
+  path.style.strokeDashoffset = String(pathLength * (1 - progress));
+}
+window.addEventListener('scroll', () => requestAnimationFrame(onScroll), { passive:true });
+window.addEventListener('resize', () => requestAnimationFrame(drawString));
+
+// ---- click micro-animations ----
+function triggerNodeAnim(nodeEl, icon){
+  const iconEl = nodeEl.querySelector('.icon');
+  const animClass = ANIM_MAP[icon] || 'anim-pulse';
+
+  if(icon === '✨'){
+    spawnSparkles(iconEl);
+  } else {
+    iconEl.classList.remove(animClass);
+    void iconEl.offsetWidth;
+    iconEl.classList.add(animClass);
+    setTimeout(() => iconEl.classList.remove(animClass), 1200);
+  }
+
+  // string glow near the node
+  path.classList.add('glow');
+  setTimeout(() => path.classList.remove('glow'), 900);
+
+  nodeEl.style.transform = 'scale(1.05)';
+  setTimeout(() => { nodeEl.style.transform = ''; }, 350);
+}
+
+function spawnSparkles(iconEl){
+  for(let i=0;i<6;i++){
+    const s = document.createElement('span');
+    s.className = 'sparkle';
+    s.textContent = '✨';
+    const angle = Math.random()*Math.PI*2;
+    const dist = 24 + Math.random()*20;
+    s.style.setProperty('--sx', Math.cos(angle)*dist + 'px');
+    s.style.setProperty('--sy', Math.sin(angle)*dist + 'px');
+    s.style.left = '50%'; s.style.top = '50%';
+    iconEl.appendChild(s);
+    setTimeout(() => s.remove(), 950);
+  }
+}
+
+// ---- add memory modal ----
+const modalPanel = document.getElementById('modalPanel');
+const iconGrid = document.getElementById('iconGrid');
+let selectedIcon = ICON_CHOICES[0];
+
+ICON_CHOICES.forEach((ic,i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'icon-choice' + (i===0 ? ' selected':'');
+  b.textContent = ic;
+  b.onclick = () => {
+    selectedIcon = ic;
+    [...iconGrid.children].forEach(el=>el.classList.remove('selected'));
+    b.classList.add('selected');
+  };
+  iconGrid.appendChild(b);
+});
+
+document.getElementById('addBtn').onclick = () => modalPanel.classList.add('open');
+document.getElementById('mCancel').onclick = () => closeModal();
+modalPanel.addEventListener('click', e => { if(e.target===modalPanel) closeModal(); });
+function closeModal(){
+  modalPanel.classList.remove('open');
+  document.getElementById('fHeadline').value = '';
+  document.getElementById('formMsg').textContent = '';
+  selectedIcon = ICON_CHOICES[0];
+  [...iconGrid.children].forEach((el,i)=>el.classList.toggle('selected', i===0));
+}
+
+document.getElementById('mSubmit').onclick = async () => {
+  const headline = document.getElementById('fHeadline').value.trim().toUpperCase();
+  const msg = document.getElementById('formMsg');
+  if(!headline){ msg.textContent = 'give it a headline.'; return; }
+
+  const btn = document.getElementById('mSubmit');
+  btn.disabled = true;
+  msg.textContent = 'adding…';
+
+  const maxOrder = nodesData.length ? Math.max(...nodesData.map(n=>n.order_index)) : 0;
+  const { error } = await supabase.from('memory_map_nodes').insert({
+    headline, icon: selectedIcon, order_index: maxOrder + 1, is_anchor: false
+  });
+
+  btn.disabled = false;
+  if(error){
+    console.error('memory map save error:', error);
+    msg.textContent = 'could not save: ' + (error.message || 'unknown error');
+    return;
+  }
+  msg.textContent = '✓ added';
+  setTimeout(() => { closeModal(); loadNodes(); }, 400);
+};
+
+loadNodes();
+</script>
+</body>
+</html>
