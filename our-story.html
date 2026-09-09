@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0c0a08;
+    --ink-2:#151210;
+    --paper:#f3ead6;
+    --paper-dim:rgba(243,234,214,0.55);
+    --paper-faint:rgba(243,234,214,0.16);
+    --brass:#c9a227;
+    --string:#a3182a;
+    --old-paper:#e9dfc4;
+    --old-ink:#2a2118;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--ink);}
+  body{color:var(--paper);font-family:'Space Mono',monospace;min-height:100vh;padding-bottom:60px;}
+  body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(rgba(243,234,214,0.035) 1px, transparent 1px);
+    background-size:3px 3px;opacity:0.5;
+  }
+
+  .topbar{
+    position:sticky;top:0;z-index:20;background:rgba(10,9,8,0.92);backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--paper-faint);padding:16px 18px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .back{color:var(--paper-dim);text-decoration:none;font-size:0.72rem;letter-spacing:0.05em;cursor:pointer;background:none;border:none;font-family:'Space Mono',monospace;}
+  .back:hover{color:var(--brass);}
+  .g-title{font-family:'Fraunces',serif;font-weight:900;font-size:1.05rem;}
+  .counter{font-size:0.66rem;color:var(--paper-dim);letter-spacing:0.04em;}
+
+  main{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:26px 16px 0;}
+
+  .page-head{text-align:center;margin-bottom:24px;}
+  .page-head .icon{font-size:2rem;}
+  .page-head h1{font-family:'Fraunces',serif;font-weight:900;font-size:1.5rem;margin-top:6px;}
+  .page-head p{margin-top:6px;font-size:0.74rem;color:var(--paper-dim);font-style:italic;}
+
+  .section-label{font-size:0.7rem;letter-spacing:0.1em;color:var(--brass);margin-bottom:12px;}
+
+  /* ---- chapter index ---- */
+  .chapter-row{
+    display:flex;align-items:baseline;gap:12px;padding:14px 4px;
+    border-bottom:1px solid var(--paper-faint);cursor:pointer;
+  }
+  .chapter-row:hover .chapter-title{color:var(--brass);}
+  .chapter-row .num{font-family:'Fraunces',serif;font-weight:900;font-size:1rem;color:var(--paper-dim);min-width:26px;}
+  .chapter-title{font-size:0.85rem;flex:1;}
+  .chapter-date{font-size:0.62rem;color:var(--paper-dim);white-space:nowrap;}
+
+  .add-btn{
+    display:block;width:100%;margin-top:20px;
+    background:transparent;border:1px dashed var(--paper-faint);color:var(--paper-dim);
+    font-family:'Space Mono',monospace;font-size:0.75rem;letter-spacing:0.04em;
+    padding:14px;cursor:pointer;
+  }
+  .add-btn:hover{border-color:var(--brass);color:var(--brass);}
+
+  /* ---- chapter view (book page) ---- */
+  #chapterView{display:none;}
+  #chapterView.show{display:block;animation:pageTurn 0.4s ease;}
+  @keyframes pageTurn{
+    from{opacity:0;transform:perspective(800px) rotateY(-8deg);}
+    to{opacity:1;transform:perspective(800px) rotateY(0);}
+  }
+  .book-page{
+    background:var(--old-paper);color:var(--old-ink);border:1px solid rgba(0,0,0,0.2);
+    padding:26px 20px 30px;box-shadow:0 12px 30px rgba(0,0,0,0.4);
+  }
+  .book-page .ch-title{font-family:'Fraunces',serif;font-weight:900;font-size:1.25rem;line-height:1.3;}
+  .book-page .ch-date{font-size:0.72rem;color:rgba(42,33,24,0.6);margin-top:8px;letter-spacing:0.04em;}
+  .book-divider{border:none;border-top:1px solid rgba(42,33,24,0.25);margin:18px 0;}
+  .book-content{font-family:'Fraunces',serif;font-size:1rem;line-height:1.75;white-space:pre-wrap;}
+  .placeholder-block{text-align:center;padding:26px 10px;color:rgba(42,33,24,0.55);}
+  .placeholder-block .loading{font-family:'Space Mono',monospace;letter-spacing:0.1em;font-size:0.8rem;margin-bottom:8px;}
+  .placeholder-block .sub{font-family:'Fraunces',serif;font-style:italic;font-size:0.9rem;}
+
+  .book-actions{display:flex;gap:8px;margin-top:20px;}
+  .book-actions button{
+    flex:1;font-family:'Space Mono',monospace;font-size:0.68rem;letter-spacing:0.04em;
+    padding:11px 8px;cursor:pointer;background:transparent;border:1px solid rgba(42,33,24,0.35);color:var(--old-ink);
+  }
+  .book-actions button:hover{border-color:var(--old-ink);}
+  .book-actions .danger:hover{background:rgba(163,24,42,0.1);border-color:var(--string);color:var(--string);}
+
+  .chapter-nav{display:flex;justify-content:space-between;align-items:center;margin-top:22px;}
+  .chapter-nav button{
+    background:transparent;border:1px solid var(--paper-faint);color:var(--paper-dim);
+    font-family:'Space Mono',monospace;font-size:0.68rem;letter-spacing:0.03em;
+    padding:10px 12px;cursor:pointer;
+  }
+  .chapter-nav button:hover:not(:disabled){border-color:var(--brass);color:var(--brass);}
+  .chapter-nav button:disabled{opacity:0.3;cursor:default;}
+  .chapter-nav .dots{color:var(--paper-dim);letter-spacing:0.2em;}
+
+  /* ---- edit form (inline, dark theme) ---- */
+  .edit-block{margin-top:16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:0.66rem;letter-spacing:0.06em;color:var(--paper-dim);margin-bottom:6px;}
+  .field input[type=text], .field input[type=date], .field input[type=number], .field textarea{
+    width:100%;background:transparent;border:1px solid var(--paper-faint);color:var(--paper);
+    font-family:'Space Mono',monospace;font-size:0.78rem;padding:10px;
+  }
+  .field textarea{resize:vertical;min-height:130px;}
+  .sheet-submit{
+    width:100%;background:var(--brass);color:var(--ink);border:none;
+    font-family:'Space Mono',monospace;font-weight:700;font-size:0.78rem;letter-spacing:0.04em;
+    padding:13px;cursor:pointer;margin-top:4px;
+  }
+  .sheet-submit:disabled{opacity:0.5;}
+  .sheet-cancel{
+    width:100%;background:none;border:none;color:var(--paper-dim);
+    font-family:'Space Mono',monospace;font-size:0.72rem;padding:10px;cursor:pointer;
+  }
+  .form-msg{font-size:0.7rem;color:var(--paper-dim);margin-top:8px;min-height:1em;}
+
+  /* ---- add chapter sheet ---- */
+  .sheet-panel{
+    position:fixed;inset:0;z-index:40;background:rgba(0,0,0,0.7);
+    display:none;align-items:flex-end;justify-content:center;
+  }
+  .sheet-panel.open{display:flex;}
+  .sheet{
+    background:var(--ink-2);border-top:1px solid var(--paper-faint);
+    width:100%;max-width:480px;max-height:88vh;overflow-y:auto;
+    padding:22px 20px 28px;animation:sheetUp 0.25s ease;
+  }
+  @keyframes sheetUp{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .sheet h3{font-family:'Fraunces',serif;font-weight:900;font-size:1.1rem;margin-bottom:16px;}
+
+  /* ---- confirm modal ---- */
+  .confirm-panel{
+    position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.75);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .confirm-panel.open{display:flex;}
+  .confirm-box{
+    background:var(--ink-2);border:1px solid var(--string);padding:22px 20px;max-width:340px;text-align:center;
+  }
+  .confirm-box p{font-size:0.8rem;margin-bottom:4px;}
+  .confirm-box .sub{font-size:0.68rem;color:var(--paper-dim);margin-bottom:18px;}
+  .confirm-actions{display:flex;gap:8px;}
+  .confirm-actions button{
+    flex:1;font-family:'Space Mono',monospace;font-size:0.72rem;padding:11px;cursor:pointer;
+    background:transparent;border:1px solid var(--paper-faint);color:var(--paper);
+  }
+  .confirm-actions .del-btn{border-color:var(--string);color:var(--string);}
+  .confirm-actions .del-btn:hover{background:rgba(163,24,42,0.15);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back" id="backBtn">← BACK</button>
+  <span class="g-title" id="topTitle">OUR STORY</span>
+  <span class="counter" id="chCounter"></span>
+</header>
+
+<main>
+  <div id="indexView">
+    <div class="page-head">
+      <div class="icon">📖</div>
+      <h1>OUR STORY</h1>
+      <p>A collection of our chapters</p>
+    </div>
+    <div class="section-label">📑 CHAPTER INDEX</div>
+    <div id="chapterList"></div>
+    <button class="add-btn" id="addBtn">＋ ADD NEW CHAPTER</button>
+  </div>
+
+  <div id="chapterView">
+    <div class="book-page">
+      <div class="ch-title" id="cvTitle"></div>
+      <div class="ch-date" id="cvDate">📅 —</div>
+      <hr class="book-divider">
+      <div id="cvContentWrap"></div>
+
+      <div class="edit-block" id="editBlock" style="display:none;">
+        <div class="field">
+          <label>CHAPTER TITLE</label>
+          <input type="text" id="eTitle">
+        </div>
+        <div class="field">
+          <label>DATE</label>
+          <input type="date" id="eDate">
+        </div>
+        <div class="field">
+          <label>STORY CONTENT</label>
+          <textarea id="eContent" placeholder="Write the story here..."></textarea>
+        </div>
+        <button class="sheet-submit" id="eSave">SAVE CHAPTER</button>
+        <button class="sheet-cancel" id="eCancel">CANCEL</button>
+        <div class="form-msg" id="editMsg"></div>
+      </div>
+
+      <div class="book-actions" id="bookActions">
+        <button id="editToggle">✏️ EDIT CHAPTER</button>
+        <button class="danger" id="deleteToggle">🗑️ DELETE</button>
+      </div>
+    </div>
+
+    <div class="chapter-nav">
+      <button id="prevCh">← PREVIOUS</button>
+      <span class="dots">• • •</span>
+      <button id="nextCh">NEXT →</button>
+    </div>
+  </div>
+</main>
+
+<!-- add chapter sheet -->
+<div class="sheet-panel" id="sheetPanel">
+  <div class="sheet">
+    <h3>＋ ADD NEW CHAPTER</h3>
+    <div class="field">
+      <label>CHAPTER NUMBER</label>
+      <input type="number" id="fNumber" readonly>
+    </div>
+    <div class="field">
+      <label>CHAPTER TITLE</label>
+      <input type="text" id="fTitle" placeholder="e.g. The Day Everything Changed">
+    </div>
+    <div class="field">
+      <label>DATE (optional)</label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="field">
+      <label>STORY CONTENT (optional — can add later)</label>
+      <textarea id="fContent" placeholder="Leave blank to write later..."></textarea>
+    </div>
+    <button class="sheet-submit" id="fSubmit">SAVE CHAPTER</button>
+    <button class="sheet-cancel" id="fCancel">CANCEL</button>
+    <div class="form-msg" id="formMsg"></div>
+  </div>
+</div>
+
+<!-- delete confirm -->
+<div class="confirm-panel" id="confirmPanel">
+  <div class="confirm-box">
+    <p>Delete this chapter?</p>
+    <div class="sub">This action cannot be undone.</div>
+    <div class="confirm-actions">
+      <button id="confirmCancel">CANCEL</button>
+      <button class="del-btn" id="confirmDelete">DELETE</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// story chapters live in the GALLERY project, same as calendar/letters/memory map
+const SUPABASE_URL = 'https://yesfebylerfhofhybtdp.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8rlJJfAHpciqCHvA1VmLAA_uWzj-p4w';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const MONTH_NAMES = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+function formatDate(iso){
+  if(!iso) return null;
+  const d = new Date(iso+'T00:00:00');
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let chapters = [];
+let currentIndex = -1;
+
+const indexView = document.getElementById('indexView');
+const chapterView = document.getElementById('chapterView');
+const chapterList = document.getElementById('chapterList');
+const chCounter = document.getElementById('chCounter');
+const backBtn = document.getElementById('backBtn');
+
+async function loadChapters(){
+  const { data, error } = await supabase
+    .from('story_chapters')
+    .select('id, chapter_number, title, date, story_content')
+    .order('chapter_number', { ascending: true });
+
+  if(error){
+    console.error('story load error:', error);
+    chapterList.innerHTML = `<div style="color:var(--paper-dim);font-size:0.76rem;padding:20px 0;">could not load: ${escapeHtml(error.message||'')}</div>`;
+    return;
+  }
+  chapters = data || [];
+  renderIndex();
+}
+
+function renderIndex(){
+  chapterList.innerHTML = '';
+  if(chapters.length === 0){
+    chapterList.innerHTML = `<div style="color:var(--paper-dim);font-size:0.76rem;padding:20px 0;">No chapters yet — start with chapter one.</div>`;
+  }
+  chapters.forEach((c, i) => {
+    const row = document.createElement('div');
+    row.className = 'chapter-row';
+    row.innerHTML = `
+      <span class="num">${String(c.chapter_number).padStart(2,'0')}</span>
+      <span class="chapter-title">${escapeHtml(c.title)}</span>
+      <span class="chapter-date">${formatDate(c.date) || ''}</span>
+    `;
+    row.onclick = () => openChapter(i);
+    chapterList.appendChild(row);
+  });
+}
+
+function openChapter(i){
+  currentIndex = i;
+  const c = chapters[i];
+  indexView.style.display = 'none';
+  chapterView.classList.add('show');
+  chCounter.textContent = `CHAPTER ${c.chapter_number} / ${chapters.length}`;
+
+  document.getElementById('cvTitle').textContent = `📖 ${c.title.toUpperCase()}`;
+  document.getElementById('cvDate').textContent = '📅 ' + (formatDate(c.date) || '—');
+
+  const wrap = document.getElementById('cvContentWrap');
+  if(c.story_content && c.story_content.trim()){
+    wrap.innerHTML = `<div class="book-content">${escapeHtml(c.story_content)}</div>`;
+  } else {
+    wrap.innerHTML = `
+      <div class="placeholder-block">
+        <div class="loading">STORY LOADING...</div>
+        <div class="sub">This chapter is waiting to be written.</div>
+      </div>`;
+  }
+
+  closeEdit();
+  document.getElementById('prevCh').disabled = i === 0;
+  document.getElementById('nextCh').disabled = i === chapters.length-1;
+}
+
+function closeIndexToList(){
+  chapterView.classList.remove('show');
+  indexView.style.display = 'block';
+  chCounter.textContent = '';
+  currentIndex = -1;
+}
+backBtn.onclick = () => {
+  if(chapterView.classList.contains('show')) closeIndexToList();
+  else window.location.href = 'index.html';
+};
+
+document.getElementById('prevCh').onclick = () => { if(currentIndex>0) openChapter(currentIndex-1); };
+document.getElementById('nextCh').onclick = () => { if(currentIndex<chapters.length-1) openChapter(currentIndex+1); };
+
+// ---- edit chapter ----
+const editBlock = document.getElementById('editBlock');
+const bookActions = document.getElementById('bookActions');
+document.getElementById('editToggle').onclick = () => {
+  const c = chapters[currentIndex];
+  document.getElementById('eTitle').value = c.title || '';
+  document.getElementById('eDate').value = c.date || '';
+  document.getElementById('eContent').value = c.story_content || '';
+  editBlock.style.display = 'block';
+  bookActions.style.display = 'none';
+};
+function closeEdit(){
+  editBlock.style.display = 'none';
+  bookActions.style.display = 'flex';
+  document.getElementById('editMsg').textContent = '';
+}
+document.getElementById('eCancel').onclick = closeEdit;
+
+document.getElementById('eSave').onclick = async () => {
+  const c = chapters[currentIndex];
+  const title = document.getElementById('eTitle').value.trim();
+  const date = document.getElementById('eDate').value || null;
+  const content = document.getElementById('eContent').value;
+  const msg = document.getElementById('editMsg');
+  if(!title){ msg.textContent = 'title cannot be empty.'; return; }
+
+  msg.textContent = 'saving…';
+  const { error } = await supabase.from('story_chapters')
+    .update({ title, date, story_content: content || null })
+    .eq('id', c.id);
+
+  if(error){
+    console.error('chapter update error:', error);
+    msg.textContent = 'could not save: ' + (error.message||'');
+    return;
+  }
+  await loadChapters();
+  openChapter(currentIndex);
+};
+
+// ---- delete chapter ----
+const confirmPanel = document.getElementById('confirmPanel');
+document.getElementById('deleteToggle').onclick = () => confirmPanel.classList.add('open');
+document.getElementById('confirmCancel').onclick = () => confirmPanel.classList.remove('open');
+document.getElementById('confirmDelete').onclick = async () => {
+  const c = chapters[currentIndex];
+  const { error } = await supabase.from('story_chapters').delete().eq('id', c.id);
+  confirmPanel.classList.remove('open');
+  if(error){ console.error('delete error:', error); return; }
+  await loadChapters();
+  closeIndexToList();
+};
+
+// ---- add new chapter ----
+const sheetPanel = document.getElementById('sheetPanel');
+document.getElementById('addBtn').onclick = () => {
+  const nextNum = chapters.length ? Math.max(...chapters.map(c=>c.chapter_number))+1 : 1;
+  document.getElementById('fNumber').value = nextNum;
+  sheetPanel.classList.add('open');
+};
+document.getElementById('fCancel').onclick = () => closeSheet();
+sheetPanel.addEventListener('click', e => { if(e.target===sheetPanel) closeSheet(); });
+function closeSheet(){
+  sheetPanel.classList.remove('open');
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fDate').value = '';
+  document.getElementById('fContent').value = '';
+  document.getElementById('formMsg').textContent = '';
+}
+
+document.getElementById('fSubmit').onclick = async () => {
+  const chapter_number = parseInt(document.getElementById('fNumber').value, 10);
+  const title = document.getElementById('fTitle').value.trim();
+  const date = document.getElementById('fDate').value || null;
+  const content = document.getElementById('fContent').value || null;
+  const msg = document.getElementById('formMsg');
+  if(!title){ msg.textContent = 'give the chapter a title.'; return; }
+
+  const btn = document.getElementById('fSubmit');
+  btn.disabled = true;
+  msg.textContent = 'saving…';
+
+  const { error } = await supabase.from('story_chapters').insert({
+    chapter_number, title, date, story_content: content
+  });
+
+  btn.disabled = false;
+  if(error){
+    console.error('chapter save error:', error);
+    msg.textContent = 'could not save: ' + (error.message||'unknown error');
+    return;
+  }
+  msg.textContent = '✓ saved';
+  setTimeout(() => { closeSheet(); loadChapters(); }, 400);
+};
+
+loadChapters();
+</script>
+</body>
+</html>
