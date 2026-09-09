@@ -122,6 +122,18 @@
   }
   .form-msg{font-size:0.7rem;color:var(--paper-dim);margin-top:8px;min-height:1em;}
 
+  /* the edit form sits on top of the light old-paper book page, so it needs dark text there */
+  .book-page .field label{color:rgba(42,33,24,0.65);}
+  .book-page .field input[type=text],
+  .book-page .field input[type=date],
+  .book-page .field textarea{
+    color:var(--old-ink);border-color:rgba(42,33,24,0.35);
+  }
+  .book-page .field input[type=text]::placeholder,
+  .book-page .field textarea::placeholder{color:rgba(42,33,24,0.4);}
+  .book-page .form-msg{color:rgba(42,33,24,0.6);}
+  .book-page .sheet-cancel{color:rgba(42,33,24,0.6);}
+
   /* ---- add chapter sheet ---- */
   .sheet-panel{
     position:fixed;inset:0;z-index:40;background:rgba(0,0,0,0.7);
