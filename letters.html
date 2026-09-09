@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Letters — Our Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,500&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0c0a08;
+    --ink-2:#151210;
+    --paper:#f3ead6;
+    --paper-dim:rgba(243,234,214,0.55);
+    --paper-faint:rgba(243,234,214,0.16);
+    --paper-faint-2:rgba(243,234,214,0.08);
+    --brass:#c9a227;
+    --string:#a3182a;
+    --old-paper:#e9dfc4;
+    --old-ink:#2a2118;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--ink);}
+  body{
+    color:var(--paper);
+    font-family:'Space Mono',monospace;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(rgba(243,234,214,0.035) 1px, transparent 1px);
+    background-size:3px 3px;opacity:0.5;
+  }
+
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:rgba(10,9,8,0.92);backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--paper-faint);
+    padding:16px 18px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .back{color:var(--paper-dim);text-decoration:none;font-size:0.72rem;letter-spacing:0.05em;}
+  .back:hover{color:var(--brass);}
+  .g-title{font-family:'Fraunces',serif;font-weight:900;font-size:1.05rem;letter-spacing:0.01em;}
+
+  main{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:26px 16px 0;}
+
+  .page-head{text-align:center;margin-bottom:8px;}
+  .page-head .icon{font-size:2rem;}
+  .page-head h1{font-family:'Fraunces',serif;font-weight:900;font-size:1.4rem;letter-spacing:0.01em;margin-top:6px;}
+  .page-head p{margin-top:6px;font-size:0.76rem;font-style:italic;color:var(--paper-dim);}
+  .letter-count{
+    text-align:center;margin:18px 0 22px;font-size:0.72rem;letter-spacing:0.08em;
+    color:var(--brass);border:1px solid var(--paper-faint);display:inline-block;padding:8px 16px;
+  }
+  .count-wrap{text-align:center;}
+
+  .controls{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+  #searchInput{
+    background:transparent;border:1px solid var(--paper-faint);color:var(--paper);
+    font-family:'Space Mono',monospace;font-size:0.78rem;padding:11px 12px;width:100%;
+  }
+  #searchInput::placeholder{color:var(--paper-dim);}
+  #searchInput:focus{outline:none;border-color:var(--brass);}
+  .filters{display:flex;flex-wrap:wrap;gap:6px;}
+  .filter-chip{
+    background:transparent;border:1px solid var(--paper-faint);color:var(--paper-dim);
+    font-family:'Space Mono',monospace;font-size:0.7rem;letter-spacing:0.03em;
+    padding:7px 11px;cursor:pointer;
+  }
+  .filter-chip.active{border-color:var(--brass);color:var(--brass);}
+
+  /* ---- pinned letter ---- */
+  .pinned-wrap{display:none;margin-bottom:26px;}
+  .pinned-wrap.show{display:block;}
+  .pinned-label{
+    text-align:center;font-size:0.68rem;letter-spacing:0.08em;color:var(--brass);margin-bottom:10px;
+  }
+  .pinned-card{
+    border:1px solid var(--brass);padding:26px 16px;text-align:center;cursor:pointer;
+    background:rgba(201,162,39,0.05);
+  }
+  .pinned-card .env-icon{font-size:2.4rem;}
+  .pinned-card .num{font-family:'Fraunces',serif;font-weight:900;font-size:1.1rem;margin-top:10px;}
+  .pinned-card .date{font-size:0.72rem;color:var(--paper-dim);margin-top:4px;letter-spacing:0.04em;}
+
+  /* ---- envelope grid ---- */
+  .env-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .env-card{
+    border:1px solid var(--paper-faint);padding:22px 10px;text-align:center;cursor:pointer;
+    transition:transform 0.15s ease, border-color 0.15s ease;
+  }
+  .env-card:hover{border-color:var(--brass);transform:translateY(-2px);}
+  .env-card.dimmed{opacity:0.25;}
+  .env-card .env-icon{font-size:1.9rem;}
+  .env-card .num{font-family:'Fraunces',serif;font-weight:900;font-size:0.92rem;margin-top:8px;}
+  .env-card .date{font-size:0.64rem;color:var(--paper-dim);margin-top:4px;letter-spacing:0.03em;}
+  .env-card .cat{font-size:0.85rem;margin-top:6px;}
+  .empty-note{
+    grid-column:1/-1;text-align:center;color:var(--paper-dim);font-size:0.76rem;padding:30px 0;
+  }
+
+  .add-btn{
+    display:block;width:100%;margin-top:22px;
+    background:transparent;border:1px dashed var(--paper-faint);color:var(--paper-dim);
+    font-family:'Space Mono',monospace;font-size:0.75rem;letter-spacing:0.04em;
+    padding:14px;cursor:pointer;
+  }
+  .add-btn:hover{border-color:var(--brass);color:var(--brass);}
+
+  .private-note{
+    text-align:center;margin-top:30px;font-size:0.68rem;letter-spacing:0.05em;color:var(--paper-dim);
+  }
+  .private-note .lock{color:var(--brass);}
+
+  /* ---- add letter sheet ---- */
+  .sheet-panel{
+    position:fixed;inset:0;z-index:40;background:rgba(0,0,0,0.7);
+    display:none;align-items:flex-end;justify-content:center;
+  }
+  .sheet-panel.open{display:flex;}
+  .sheet{
+    background:var(--ink-2);border-top:1px solid var(--paper-faint);
+    width:100%;max-width:480px;max-height:88vh;overflow-y:auto;
+    padding:22px 20px 28px;animation:sheetUp 0.25s ease;
+  }
+  @keyframes sheetUp{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .sheet h3{font-family:'Fraunces',serif;font-weight:900;font-size:1.1rem;margin-bottom:16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:0.66rem;letter-spacing:0.06em;color:var(--paper-dim);margin-bottom:6px;}
+  .field input[type=text], .field input[type=date], .field textarea{
+    width:100%;background:transparent;border:1px solid var(--paper-faint);color:var(--paper);
+    font-family:'Space Mono',monospace;font-size:0.78rem;padding:10px;
+  }
+  .field textarea{resize:vertical;min-height:110px;}
+  .cat-grid{display:flex;flex-wrap:wrap;gap:6px;}
+  .cat-toggle{
+    background:transparent;border:1px solid var(--paper-faint);color:var(--paper-dim);
+    font-size:0.72rem;padding:8px 10px;cursor:pointer;
+  }
+  .cat-toggle.selected{border-color:var(--brass);color:var(--brass);background:rgba(201,162,39,0.08);}
+  .pin-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .pin-row input{width:16px;height:16px;}
+  .pin-row label{font-size:0.72rem;color:var(--paper-dim);letter-spacing:0.03em;}
+  .sheet-submit{
+    width:100%;background:var(--brass);color:var(--ink);border:none;
+    font-family:'Space Mono',monospace;font-weight:700;font-size:0.78rem;letter-spacing:0.04em;
+    padding:13px;cursor:pointer;margin-top:4px;
+  }
+  .sheet-submit:disabled{opacity:0.5;cursor:default;}
+  .sheet-cancel{
+    width:100%;background:none;border:none;color:var(--paper-dim);
+    font-family:'Space Mono',monospace;font-size:0.72rem;padding:10px;cursor:pointer;letter-spacing:0.04em;
+  }
+  .form-msg{font-size:0.7rem;color:var(--paper-dim);margin-top:8px;min-height:1em;}
+
+  /* ---- letter opening overlay ---- */
+  .letter-overlay{
+    position:fixed;inset:0;z-index:60;background:rgba(0,0,0,0);
+    display:none;align-items:center;justify-content:center;
+    transition:background 0.4s ease;
+  }
+  .letter-overlay.open{display:flex;background:rgba(0,0,0,0.88);}
+  .overlay-close{
+    position:absolute;top:18px;right:18px;background:none;border:none;
+    color:var(--paper-dim);font-size:1.4rem;cursor:pointer;z-index:5;opacity:0;transition:opacity 0.3s ease;
+  }
+  .overlay-close.show{opacity:1;}
+
+  .env-phase{
+    font-size:4rem;opacity:0;transform:scale(0.6);
+    transition:opacity 0.4s ease, transform 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .env-phase.show{opacity:1;transform:scale(1);}
+  .env-phase.flap{animation:flapOpen 0.6s ease 0.3s;}
+  @keyframes flapOpen{
+    0%{transform:scale(1) rotateX(0deg);}
+    50%{transform:scale(1.08) rotateX(25deg);}
+    100%{transform:scale(1) rotateX(0deg);}
+  }
+
+  .paper-wrap{
+    width:100%;max-width:480px;max-height:82vh;margin:0 20px;
+    background:var(--old-paper);color:var(--old-ink);
+    padding:30px 24px 34px;overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6);
+    opacity:0;transform:translateY(40px) scale(0.96);
+    transition:opacity 0.6s ease, transform 0.6s cubic-bezier(.22,1,.36,1);
+    position:absolute;
+  }
+  .paper-wrap.show{opacity:1;transform:translateY(0) scale(1);}
+  .paper-meta{
+    font-family:'Space Mono',monospace;font-size:0.64rem;letter-spacing:0.06em;
+    color:rgba(42,33,24,0.55);text-align:center;margin-bottom:18px;
+  }
+  .paper-quote{
+    text-align:center;font-family:'Fraunces',serif;font-style:italic;font-weight:500;
+    font-size:0.85rem;color:rgba(42,33,24,0.6);
+    position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);
+    opacity:1;transition:opacity 0.5s ease;
+  }
+  .paper-quote.hide{opacity:0;pointer-events:none;}
+  .paper-body{opacity:0;transition:opacity 0.6s ease 0.15s;}
+  .paper-body.show{opacity:1;}
+  .paper-date{
+    text-align:center;font-family:'Space Mono',monospace;font-size:0.68rem;
+    letter-spacing:0.08em;color:rgba(42,33,24,0.6);margin-bottom:14px;
+  }
+  .paper-salutation{
+    font-family:'Fraunces',serif;font-weight:600;font-size:1.15rem;margin-bottom:16px;
+  }
+  .paper-content{
+    font-family:'Caveat',cursive;font-weight:500;font-size:1.35rem;line-height:1.55;
+    white-space:pre-wrap;text-align:left;
+  }
+  .paper-sign{
+    margin-top:20px;text-align:right;font-family:'Caveat',cursive;font-weight:700;font-size:1.3rem;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="back" href="index.html">← BACK</a>
+  <span class="g-title">LETTERS</span>
+  <span style="width:52px;"></span>
+</header>
+
+<main>
+  <div class="page-head">
+    <div class="icon">✉️</div>
+    <h1>LETTERS</h1>
+    <p>Words that stayed inside.</p>
+  </div>
+  <div class="count-wrap">
+    <span class="letter-count" id="letterCount">— LETTERS</span>
+  </div>
+
+  <div class="controls">
+    <input id="searchInput" type="text" placeholder="search letters...">
+    <div class="filters" id="filters"></div>
+  </div>
+
+  <div class="pinned-wrap" id="pinnedWrap">
+    <div class="pinned-label">📌 MOST SPECIAL LETTER</div>
+    <div class="pinned-card" id="pinnedCard"></div>
+  </div>
+
+  <div class="env-grid" id="envGrid"></div>
+
+  <button class="add-btn" id="addBtn">＋ WRITE A NEW LETTER</button>
+
+  <div class="private-note"><span class="lock">🔐</span> PRIVATE ARCHIVE — these words belong here.</div>
+</main>
+
+<!-- add letter sheet -->
+<div class="sheet-panel" id="sheetPanel">
+  <div class="sheet">
+    <h3>Write a letter</h3>
+    <div class="field">
+      <label>DATE</label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="field">
+      <label>TITLE (optional)</label>
+      <input type="text" id="fTitle" placeholder="e.g. What I never said">
+    </div>
+    <div class="field">
+      <label>CATEGORY</label>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+    <div class="field">
+      <label>TO (optional)</label>
+      <input type="text" id="fTo" placeholder="e.g. You">
+    </div>
+    <div class="field">
+      <label>LETTER</label>
+      <textarea id="fContent" placeholder="Dear you..."></textarea>
+    </div>
+    <div class="pin-row">
+      <input type="checkbox" id="fPinned">
+      <label for="fPinned">📌 Mark as most special letter</label>
+    </div>
+    <button class="sheet-submit" id="fSubmit">SAVE LETTER</button>
+    <button class="sheet-cancel" id="fCancel">CANCEL</button>
+    <div class="form-msg" id="formMsg"></div>
+  </div>
+</div>
+
+<!-- opening / reading overlay -->
+<div class="letter-overlay" id="overlay">
+  <button class="overlay-close" id="overlayClose">✕</button>
+  <div class="env-phase" id="envPhase">✉️</div>
+  <div class="paper-wrap" id="paperWrap">
+    <div class="paper-meta" id="paperMeta"></div>
+    <div class="paper-quote" id="paperQuote">"Some words are easier to write than to say."</div>
+    <div class="paper-body" id="paperBody">
+      <div class="paper-date" id="paperDate"></div>
+      <div class="paper-salutation" id="paperSalutation"></div>
+      <div class="paper-content" id="paperContent"></div>
+      <div class="paper-sign">— Fawaz</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// letters live in the GALLERY project, same as the memory calendar
+const SUPABASE_URL = 'https://yesfebylerfhofhybtdp.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8rlJJfAHpciqCHvA1VmLAA_uWzj-p4w';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CATEGORIES = [
+  { key:'love',     icon:'💌', label:'Love Letter' },
+  { key:'unsent',   icon:'🥺', label:'Unsent Letter' },
+  { key:'latenight',icon:'🌙', label:'Late Night Thoughts' },
+  { key:'special',  icon:'❤️', label:'Special Day' },
+  { key:'unspoken', icon:'💭', label:"Things I Couldn't Say" },
+  { key:'apology',  icon:'🙏', label:'Apology' },
+  { key:'future',   icon:'✨', label:'Future Letter' },
+  { key:'memory',   icon:'📖', label:'Memory Letter' },
+  { key:'other',    icon:'⭐', label:'Other' },
+];
+const FILTER_KEYS = ['love','unspoken','memory','future'];
+const catIcon = key => (CATEGORIES.find(c=>c.key===key)||{}).icon || '⭐';
+const catLabel = key => (CATEGORIES.find(c=>c.key===key)||{}).label || 'Other';
+
+const MONTH_NAMES = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+
+let allLetters = [];
+let activeFilter = 'ALL';
+let searchTerm = '';
+
+const envGrid = document.getElementById('envGrid');
+const filtersEl = document.getElementById('filters');
+const letterCount = document.getElementById('letterCount');
+const pinnedWrap = document.getElementById('pinnedWrap');
+const pinnedCard = document.getElementById('pinnedCard');
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+async function loadLetters(){
+  const { data, error } = await supabase
+    .from('letters')
+    .select('id, letter_date, title, category, recipient, content, pinned, created_at')
+    .order('letter_date', { ascending: true });
+
+  if(error){
+    console.error('letters load error:', error);
+    envGrid.innerHTML = `<div class="empty-note">could not load letters: ${escapeHtml(error.message||'')}</div>`;
+    return;
+  }
+  allLetters = data || [];
+  renderFilters();
+  renderAll();
+}
+
+function renderFilters(){
+  filtersEl.innerHTML = '';
+  const mk = (label, key) => {
+    const b = document.createElement('button');
+    b.className = 'filter-chip' + (activeFilter===key ? ' active':'');
+    b.textContent = label;
+    b.onclick = () => { activeFilter = key; renderFilters(); renderAll(); };
+    return b;
+  };
+  filtersEl.appendChild(mk('ALL','ALL'));
+  FILTER_KEYS.forEach(k => filtersEl.appendChild(mk(catIcon(k)+' '+catLabel(k).split(' ')[0], k)));
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  renderAll();
+});
+
+function matches(letter){
+  if(activeFilter !== 'ALL' && letter.category !== activeFilter) return false;
+  if(searchTerm){
+    const hay = ((letter.title||'') + ' ' + (letter.content||'')).toLowerCase();
+    if(!hay.includes(searchTerm)) return false;
+  }
+  return true;
+}
+
+function renderAll(){
+  letterCount.textContent = `${allLetters.length} LETTER${allLetters.length===1?'':'S'}`;
+
+  const pinned = allLetters.find(l => l.pinned);
+  if(pinned){
+    pinnedWrap.classList.add('show');
+    pinnedCard.innerHTML = `
+      <div class="env-icon">✉️</div>
+      <div class="num">${escapeHtml(pinned.title || 'Untitled Letter')}</div>
+      <div class="date">${formatDate(pinned.letter_date)}</div>
+    `;
+    pinnedCard.onclick = () => openLetter(pinned);
+  } else {
+    pinnedWrap.classList.remove('show');
+  }
+
+  envGrid.innerHTML = '';
+  if(allLetters.length === 0){
+    envGrid.innerHTML = `<div class="empty-note">No letters yet — write the first one.</div>`;
+    return;
+  }
+
+  allLetters.forEach((letter, i) => {
+    const num = String(i+1).padStart(2,'0');
+    const card = document.createElement('div');
+    card.className = 'env-card' + (matches(letter) ? '' : ' dimmed');
+    card.innerHTML = `
+      <div class="env-icon">✉️</div>
+      <div class="num">LETTER #${num}</div>
+      <div class="date">${formatDate(letter.letter_date)}</div>
+      <div class="cat">${catIcon(letter.category)}</div>
+    `;
+    card.onclick = () => openLetter(letter, num);
+    envGrid.appendChild(card);
+  });
+}
+
+// ---- opening animation + reading view ----
+const overlay = document.getElementById('overlay');
+const envPhase = document.getElementById('envPhase');
+const paperWrap = document.getElementById('paperWrap');
+const paperMeta = document.getElementById('paperMeta');
+const paperQuote = document.getElementById('paperQuote');
+const paperBody = document.getElementById('paperBody');
+const paperDate = document.getElementById('paperDate');
+const paperSalutation = document.getElementById('paperSalutation');
+const paperContent = document.getElementById('paperContent');
+const overlayClose = document.getElementById('overlayClose');
+
+function openLetter(letter, num){
+  document.body.style.overflow = 'hidden';
+  overlay.classList.add('open');
+  envPhase.className = 'env-phase';
+  paperWrap.className = 'paper-wrap';
+  paperQuote.className = 'paper-quote';
+  paperBody.className = 'paper-body';
+  overlayClose.classList.remove('show');
+
+  paperMeta.textContent = `LETTER ${num||''}  •  ${catLabel(letter.category).toUpperCase()}`;
+  paperDate.textContent = formatDate(letter.letter_date);
+  paperSalutation.textContent = 'Dear ' + (letter.recipient && letter.recipient.trim() ? letter.recipient : 'You') + ',';
+  paperContent.textContent = letter.content || '';
+
+  requestAnimationFrame(() => {
+    envPhase.classList.add('show');
+    setTimeout(() => envPhase.classList.add('flap'), 50);
+  });
+
+  setTimeout(() => {
+    envPhase.classList.remove('show');
+    paperWrap.classList.add('show');
+    overlayClose.classList.add('show');
+  }, 800);
+
+  setTimeout(() => {
+    paperQuote.classList.add('hide');
+    paperBody.classList.add('show');
+  }, 1700);
+}
+
+function closeLetter(){
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+overlayClose.onclick = closeLetter;
+overlay.addEventListener('click', e => { if(e.target === overlay) closeLetter(); });
+
+// ---- add letter sheet ----
+const sheetPanel = document.getElementById('sheetPanel');
+const catGrid = document.getElementById('catGrid');
+let selectedCategory = 'other';
+
+CATEGORIES.forEach(c => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'cat-toggle' + (c.key==='other' ? ' selected':'');
+  b.textContent = `${c.icon} ${c.label}`;
+  b.onclick = () => {
+    selectedCategory = c.key;
+    [...catGrid.children].forEach(el=>el.classList.remove('selected'));
+    b.classList.add('selected');
+  };
+  catGrid.appendChild(b);
+});
+
+document.getElementById('addBtn').onclick = () => sheetPanel.classList.add('open');
+document.getElementById('fCancel').onclick = () => closeSheet();
+sheetPanel.addEventListener('click', e => { if(e.target===sheetPanel) closeSheet(); });
+function closeSheet(){
+  sheetPanel.classList.remove('open');
+  document.getElementById('fDate').value = '';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fTo').value = '';
+  document.getElementById('fContent').value = '';
+  document.getElementById('fPinned').checked = false;
+  document.getElementById('formMsg').textContent = '';
+  selectedCategory = 'other';
+  [...catGrid.children].forEach((el,i)=>el.classList.toggle('selected', CATEGORIES[i].key==='other'));
+}
+
+document.getElementById('fSubmit').onclick = async () => {
+  const dateVal = document.getElementById('fDate').value;
+  const title = document.getElementById('fTitle').value.trim();
+  const to = document.getElementById('fTo').value.trim();
+  const content = document.getElementById('fContent').value.trim();
+  const pinned = document.getElementById('fPinned').checked;
+  const msg = document.getElementById('formMsg');
+
+  if(!dateVal || !content){
+    msg.textContent = 'pick a date and write something.';
+    return;
+  }
+
+  const btn = document.getElementById('fSubmit');
+  btn.disabled = true;
+  msg.textContent = 'saving…';
+
+  if(pinned){
+    // only one pinned letter at a time
+    await supabase.from('letters').update({ pinned:false }).eq('pinned', true);
+  }
+
+  const { error } = await supabase.from('letters').insert({
+    letter_date: dateVal,
+    title: title || null,
+    category: selectedCategory,
+    recipient: to || null,
+    content,
+    pinned
+  });
+
+  btn.disabled = false;
+  if(error){
+    console.error('letter save error:', error);
+    msg.textContent = 'could not save: ' + (error.message || 'unknown error');
+    return;
+  }
+  msg.textContent = '✓ saved';
+  setTimeout(() => { closeSheet(); loadLetters(); }, 500);
+};
+
+loadLetters();
+</script>
+</body>
+</html>
