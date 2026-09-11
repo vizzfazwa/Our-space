@@ -288,14 +288,20 @@ async function openVideo(url){
   viewer.classList.add('open');
 }
 
-async function playVoice(id, btn, statusSpan){
+async function playVoice(id, sender, createdAt, btn, statusSpan){
   btn.disabled = true;
   statusSpan.textContent = 'loading…';
-  const { data, error } = await supabase
-    .from('messages_archive')
-    .select('voice_data')
-    .eq('id', id)
-    .single();
+
+  let query = supabase.from('messages_archive').select('voice_data');
+  if(id !== null && id !== undefined){
+    query = query.eq('id', id);
+  } else {
+    // some older archived rows lost their id along the way — fall back to matching
+    // on sender + exact timestamp so playback still works for them.
+    query = query.eq('sender', sender).eq('created_at', createdAt).eq('has_voice', true);
+  }
+
+  const { data, error } = await query.limit(1).maybeSingle();
   if(error){
     console.error('voice fetch error:', error);
     statusSpan.textContent = 'error: ' + (error.message || error.code || 'unknown');
@@ -368,7 +374,7 @@ function renderMessage(m){
     btn.textContent = '▶ PLAY VOICE NOTE';
     const status = document.createElement('span');
     status.className = 'voice-status';
-    btn.onclick = () => playVoice(m.id, btn, status);
+    btn.onclick = () => playVoice(m.id, m.sender, m.created_at, btn, status);
     row.appendChild(btn);
     row.appendChild(status);
     wrap.appendChild(row);
