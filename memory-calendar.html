@@ -238,8 +238,6 @@
 
   <div class="detail-wrap" id="detailWrap"></div>
 
-  <button class="add-btn" id="addBtn">＋ ADD NEW MEMORY</button>
-
   <div class="stats" id="statsBox">
     <div class="stats-total"><span id="statTotal">0</span> MEMORIES SAVED</div>
     <div class="stats-breakdown" id="statBreakdown"></div>
@@ -250,31 +248,6 @@
   <div class="bday-grid" id="bdayGrid"></div>
   <div class="countdown" id="countdownBox"></div>
 </main>
-
-<div class="sheet-panel" id="sheetPanel">
-  <div class="sheet">
-    <h3>Add a memory</h3>
-    <div class="field">
-      <label>DATE</label>
-      <input type="date" id="fDate">
-    </div>
-    <div class="field">
-      <label>MEMORY TYPE (pick 1–2)</label>
-      <div class="type-grid" id="typeGrid"></div>
-    </div>
-    <div class="field">
-      <label>TITLE</label>
-      <input type="text" id="fTitle" placeholder="e.g. She Sang A Song For Me">
-    </div>
-    <div class="field">
-      <label>SHORT DESCRIPTION (optional)</label>
-      <textarea id="fDesc" placeholder="A line or two about it..."></textarea>
-    </div>
-    <button class="sheet-submit" id="fSubmit">ADD TO CALENDAR</button>
-    <button class="sheet-cancel" id="fCancel">CANCEL</button>
-    <div class="form-msg" id="formMsg"></div>
-  </div>
-</div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -573,77 +546,6 @@ function renderBirthdays(){
   }
 }
 function diffIsToday(d){ return d===0 || d===365 || d===366; }
-
-// ---- add memory sheet ----
-const sheetPanel = document.getElementById('sheetPanel');
-const typeGrid = document.getElementById('typeGrid');
-let selectedTypes = [];
-
-TYPES.forEach(t => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'type-toggle';
-  b.textContent = `${t.icon} ${t.label}`;
-  b.onclick = () => {
-    const idx = selectedTypes.indexOf(t.key);
-    if(idx>-1){ selectedTypes.splice(idx,1); }
-    else if(selectedTypes.length<2){ selectedTypes.push(t.key); }
-    document.querySelectorAll('.type-toggle').forEach(el=>el.classList.remove('selected'));
-    [...typeGrid.children].forEach((el,i) => { if(selectedTypes.includes(TYPES[i].key)) el.classList.add('selected'); });
-  };
-  typeGrid.appendChild(b);
-});
-
-document.getElementById('addBtn').onclick = () => sheetPanel.classList.add('open');
-document.getElementById('fCancel').onclick = () => closeSheet();
-sheetPanel.addEventListener('click', e => { if(e.target===sheetPanel) closeSheet(); });
-function closeSheet(){
-  sheetPanel.classList.remove('open');
-  document.getElementById('fDate').value = '';
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fDesc').value = '';
-  document.getElementById('formMsg').textContent = '';
-  selectedTypes = [];
-  [...typeGrid.children].forEach(el=>el.classList.remove('selected'));
-}
-
-document.getElementById('fSubmit').onclick = async () => {
-  const dateVal = document.getElementById('fDate').value;
-  const title = document.getElementById('fTitle').value.trim();
-  const desc = document.getElementById('fDesc').value.trim();
-  const msg = document.getElementById('formMsg');
-
-  if(!dateVal || !title || selectedTypes.length===0){
-    msg.textContent = 'pick a date, at least one type, and a title.';
-    return;
-  }
-
-  const btn = document.getElementById('fSubmit');
-  btn.disabled = true;
-  msg.textContent = 'saving…';
-
-  const { error } = await supabase.from('calendar_memories').insert({
-    memory_date: dateVal,
-    types: selectedTypes.join(','),
-    title,
-    description: desc || null
-  });
-
-  btn.disabled = false;
-  if(error){
-    console.error('calendar insert error:', error);
-    msg.textContent = 'could not save: ' + (error.message || error.code || 'unknown error');
-    return;
-  }
-  msg.textContent = '✓ added';
-  setTimeout(() => {
-    closeSheet();
-    view.year = parseInt(dateVal.slice(0,4));
-    view.month = parseInt(dateVal.slice(5,7)) - 1;
-    selectedDateKey = dateVal;
-    loadMemories();
-  }, 500);
-};
 
 // ---- init ----
 renderBirthdays();

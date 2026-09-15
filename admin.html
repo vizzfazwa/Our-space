@@ -161,6 +161,7 @@
       <button class="tab-btn" data-tab="calendar">🗓️ CALENDAR</button>
       <button class="tab-btn" data-tab="letters">✉️ LETTERS</button>
       <button class="tab-btn" data-tab="story">📖 STORY</button>
+      <button class="tab-btn" data-tab="map">🧠 MAP</button>
     </div>
 
     <div class="panel active" id="panel-messages"></div>
@@ -168,6 +169,7 @@
     <div class="panel" id="panel-calendar"></div>
     <div class="panel" id="panel-letters"></div>
     <div class="panel" id="panel-story"></div>
+    <div class="panel" id="panel-map"></div>
   </main>
 </div>
 
@@ -279,6 +281,7 @@ function loadTab(tab){
   else if(tab==='calendar') loadCalendar();
   else if(tab==='letters') loadLetters();
   else if(tab==='story') loadStory();
+  else if(tab==='map') loadMap();
 }
 
 // ============ MESSAGES ============
@@ -599,6 +602,78 @@ document.getElementById('panel-story').addEventListener('click', e => {
   }
 });
 
+// ============ MEMORY MAP ============
+const MAP_ICONS = ['❤️','👀','💬','✨','💔','🌙','📸','🎵','📖','⭐'];
+
+async function loadMap(){
+  const panel = document.getElementById('panel-map');
+  panel.innerHTML = '<div class="empty-note">loading…</div>';
+  const { data, error } = await galleryClient.from('memory_map_nodes')
+    .select('id, headline, icon, order_index, is_anchor')
+    .order('order_index', { ascending:true });
+  if(error){ panel.innerHTML = `<div class="empty-note">could not load: ${escapeHtml(error.message)}</div>`; return; }
+
+  let html = `<button class="add-btn" data-action="add-map">＋ ADD MEMORY NODE</button>`;
+  if(!data || !data.length){ html += '<div class="empty-note">No nodes yet.</div>'; }
+  else {
+    html += data.map(n => `
+      <div class="item-row">
+        <div class="item-top">
+          <span class="item-meta">#${n.order_index}</span>
+          ${n.is_anchor ? '<span class="pin-tag">📌 ANCHOR</span>' : ''}
+        </div>
+        <div class="item-main">${n.icon} ${escapeHtml(n.headline)}</div>
+        <div class="item-actions">
+          <button data-action="edit-map" data-id="${n.id}">✏️ EDIT</button>
+          <button class="danger" data-action="delete" data-type="map" data-id="${n.id}">🗑️ DELETE</button>
+        </div>
+      </div>`).join('');
+  }
+  panel.innerHTML = html;
+  window._mapData = data || [];
+}
+
+document.getElementById('panel-map').addEventListener('click', e => {
+  if(e.target.closest('[data-action="add-map"]')){
+    const nextOrder = (window._mapData||[]).length ? Math.max(...window._mapData.map(n=>n.order_index))+1 : 1;
+    openModal({
+      title:'Add Memory Node',
+      fields:[
+        {key:'headline', label:'HEADLINE', type:'text', value:''},
+        {key:'icon', label:'ICON', type:'select', options:MAP_ICONS, value:MAP_ICONS[0]},
+        {key:'order_index', label:'POSITION (higher = later)', type:'number', value:nextOrder}
+      ],
+      onSave: async (vals) => {
+        vals.headline = vals.headline.toUpperCase();
+        vals.is_anchor = false;
+        const { error } = await galleryClient.from('memory_map_nodes').insert(vals);
+        if(error) throw error;
+        loadMap();
+      }
+    });
+    return;
+  }
+  const editBtn = e.target.closest('[data-action="edit-map"]');
+  if(editBtn){
+    const item = (window._mapData||[]).find(n=>n.id===editBtn.dataset.id);
+    if(!item) return;
+    openModal({
+      title:'Edit Memory Node',
+      fields:[
+        {key:'headline', label:'HEADLINE', type:'text', value:item.headline},
+        {key:'icon', label:'ICON', type:'select', options:MAP_ICONS, value:item.icon},
+        {key:'order_index', label:'POSITION', type:'number', value:item.order_index}
+      ],
+      onSave: async (vals) => {
+        vals.headline = vals.headline.toUpperCase();
+        const { error } = await galleryClient.from('memory_map_nodes').update(vals).eq('id', item.id);
+        if(error) throw error;
+        loadMap();
+      }
+    });
+  }
+});
+
 // ============ GENERIC MODAL ============
 const modalPanel = document.getElementById('modalPanel');
 const modalFields = document.getElementById('modalFields');
@@ -655,7 +730,8 @@ const TABLE_MAP = {
   gallery: { client: galleryClient, table:'gallery_items', reload: loadGallery },
   calendar: { client: galleryClient, table:'calendar_memories', reload: loadCalendar },
   letters: { client: galleryClient, table:'letters', reload: loadLetters },
-  story: { client: galleryClient, table:'story_chapters', reload: loadStory }
+  story: { client: galleryClient, table:'story_chapters', reload: loadStory },
+  map: { client: galleryClient, table:'memory_map_nodes', reload: loadMap }
 };
 const confirmPanel = document.getElementById('confirmPanel');
 let pendingDelete = null;

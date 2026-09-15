@@ -248,44 +248,8 @@
 
   <div class="env-grid" id="envGrid"></div>
 
-  <button class="add-btn" id="addBtn">＋ WRITE A NEW LETTER</button>
-
   <div class="private-note"><span class="lock">🔐</span> PRIVATE ARCHIVE — these words belong here.</div>
 </main>
-
-<!-- add letter sheet -->
-<div class="sheet-panel" id="sheetPanel">
-  <div class="sheet">
-    <h3>Write a letter</h3>
-    <div class="field">
-      <label>DATE</label>
-      <input type="date" id="fDate">
-    </div>
-    <div class="field">
-      <label>TITLE (optional)</label>
-      <input type="text" id="fTitle" placeholder="e.g. What I never said">
-    </div>
-    <div class="field">
-      <label>CATEGORY</label>
-      <div class="cat-grid" id="catGrid"></div>
-    </div>
-    <div class="field">
-      <label>TO (optional)</label>
-      <input type="text" id="fTo" placeholder="e.g. You">
-    </div>
-    <div class="field">
-      <label>LETTER</label>
-      <textarea id="fContent" placeholder="Dear you..."></textarea>
-    </div>
-    <div class="pin-row">
-      <input type="checkbox" id="fPinned">
-      <label for="fPinned">📌 Mark as most special letter</label>
-    </div>
-    <button class="sheet-submit" id="fSubmit">SAVE LETTER</button>
-    <button class="sheet-cancel" id="fCancel">CANCEL</button>
-    <div class="form-msg" id="formMsg"></div>
-  </div>
-</div>
 
 <!-- opening / reading overlay -->
 <div class="letter-overlay" id="overlay">
@@ -475,80 +439,6 @@ function closeLetter(){
 }
 overlayClose.onclick = closeLetter;
 overlay.addEventListener('click', e => { if(e.target === overlay) closeLetter(); });
-
-// ---- add letter sheet ----
-const sheetPanel = document.getElementById('sheetPanel');
-const catGrid = document.getElementById('catGrid');
-let selectedCategory = 'other';
-
-CATEGORIES.forEach(c => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'cat-toggle' + (c.key==='other' ? ' selected':'');
-  b.textContent = `${c.icon} ${c.label}`;
-  b.onclick = () => {
-    selectedCategory = c.key;
-    [...catGrid.children].forEach(el=>el.classList.remove('selected'));
-    b.classList.add('selected');
-  };
-  catGrid.appendChild(b);
-});
-
-document.getElementById('addBtn').onclick = () => sheetPanel.classList.add('open');
-document.getElementById('fCancel').onclick = () => closeSheet();
-sheetPanel.addEventListener('click', e => { if(e.target===sheetPanel) closeSheet(); });
-function closeSheet(){
-  sheetPanel.classList.remove('open');
-  document.getElementById('fDate').value = '';
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fTo').value = '';
-  document.getElementById('fContent').value = '';
-  document.getElementById('fPinned').checked = false;
-  document.getElementById('formMsg').textContent = '';
-  selectedCategory = 'other';
-  [...catGrid.children].forEach((el,i)=>el.classList.toggle('selected', CATEGORIES[i].key==='other'));
-}
-
-document.getElementById('fSubmit').onclick = async () => {
-  const dateVal = document.getElementById('fDate').value;
-  const title = document.getElementById('fTitle').value.trim();
-  const to = document.getElementById('fTo').value.trim();
-  const content = document.getElementById('fContent').value.trim();
-  const pinned = document.getElementById('fPinned').checked;
-  const msg = document.getElementById('formMsg');
-
-  if(!dateVal || !content){
-    msg.textContent = 'pick a date and write something.';
-    return;
-  }
-
-  const btn = document.getElementById('fSubmit');
-  btn.disabled = true;
-  msg.textContent = 'saving…';
-
-  if(pinned){
-    // only one pinned letter at a time
-    await supabase.from('letters').update({ pinned:false }).eq('pinned', true);
-  }
-
-  const { error } = await supabase.from('letters').insert({
-    letter_date: dateVal,
-    title: title || null,
-    category: selectedCategory,
-    recipient: to || null,
-    content,
-    pinned
-  });
-
-  btn.disabled = false;
-  if(error){
-    console.error('letter save error:', error);
-    msg.textContent = 'could not save: ' + (error.message || 'unknown error');
-    return;
-  }
-  msg.textContent = '✓ saved';
-  setTimeout(() => { closeSheet(); loadLetters(); }, 500);
-};
 
 loadLetters();
 </script>

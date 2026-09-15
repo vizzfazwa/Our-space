@@ -185,7 +185,6 @@
     </div>
     <div class="section-label">📑 CHAPTER INDEX</div>
     <div id="chapterList"></div>
-    <button class="add-btn" id="addBtn">＋ ADD NEW CHAPTER</button>
   </div>
 
   <div id="chapterView">
@@ -194,29 +193,6 @@
       <div class="ch-date" id="cvDate">📅 —</div>
       <hr class="book-divider">
       <div id="cvContentWrap"></div>
-
-      <div class="edit-block" id="editBlock" style="display:none;">
-        <div class="field">
-          <label>CHAPTER TITLE</label>
-          <input type="text" id="eTitle">
-        </div>
-        <div class="field">
-          <label>DATE</label>
-          <input type="date" id="eDate">
-        </div>
-        <div class="field">
-          <label>STORY CONTENT</label>
-          <textarea id="eContent" placeholder="Write the story here..."></textarea>
-        </div>
-        <button class="sheet-submit" id="eSave">SAVE CHAPTER</button>
-        <button class="sheet-cancel" id="eCancel">CANCEL</button>
-        <div class="form-msg" id="editMsg"></div>
-      </div>
-
-      <div class="book-actions" id="bookActions">
-        <button id="editToggle">✏️ EDIT CHAPTER</button>
-        <button class="danger" id="deleteToggle">🗑️ DELETE</button>
-      </div>
     </div>
 
     <div class="chapter-nav">
@@ -226,44 +202,6 @@
     </div>
   </div>
 </main>
-
-<!-- add chapter sheet -->
-<div class="sheet-panel" id="sheetPanel">
-  <div class="sheet">
-    <h3>＋ ADD NEW CHAPTER</h3>
-    <div class="field">
-      <label>CHAPTER NUMBER</label>
-      <input type="number" id="fNumber" readonly>
-    </div>
-    <div class="field">
-      <label>CHAPTER TITLE</label>
-      <input type="text" id="fTitle" placeholder="e.g. The Day Everything Changed">
-    </div>
-    <div class="field">
-      <label>DATE (optional)</label>
-      <input type="date" id="fDate">
-    </div>
-    <div class="field">
-      <label>STORY CONTENT (optional — can add later)</label>
-      <textarea id="fContent" placeholder="Leave blank to write later..."></textarea>
-    </div>
-    <button class="sheet-submit" id="fSubmit">SAVE CHAPTER</button>
-    <button class="sheet-cancel" id="fCancel">CANCEL</button>
-    <div class="form-msg" id="formMsg"></div>
-  </div>
-</div>
-
-<!-- delete confirm -->
-<div class="confirm-panel" id="confirmPanel">
-  <div class="confirm-box">
-    <p>Delete this chapter?</p>
-    <div class="sub">This action cannot be undone.</div>
-    <div class="confirm-actions">
-      <button id="confirmCancel">CANCEL</button>
-      <button class="del-btn" id="confirmDelete">DELETE</button>
-    </div>
-  </div>
-</div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -346,7 +284,6 @@ function openChapter(i){
       </div>`;
   }
 
-  closeEdit();
   document.getElementById('prevCh').disabled = i === 0;
   document.getElementById('nextCh').disabled = i === chapters.length-1;
 }
@@ -364,102 +301,6 @@ backBtn.onclick = () => {
 
 document.getElementById('prevCh').onclick = () => { if(currentIndex>0) openChapter(currentIndex-1); };
 document.getElementById('nextCh').onclick = () => { if(currentIndex<chapters.length-1) openChapter(currentIndex+1); };
-
-// ---- edit chapter ----
-const editBlock = document.getElementById('editBlock');
-const bookActions = document.getElementById('bookActions');
-document.getElementById('editToggle').onclick = () => {
-  const c = chapters[currentIndex];
-  document.getElementById('eTitle').value = c.title || '';
-  document.getElementById('eDate').value = c.date || '';
-  document.getElementById('eContent').value = c.story_content || '';
-  editBlock.style.display = 'block';
-  bookActions.style.display = 'none';
-};
-function closeEdit(){
-  editBlock.style.display = 'none';
-  bookActions.style.display = 'flex';
-  document.getElementById('editMsg').textContent = '';
-}
-document.getElementById('eCancel').onclick = closeEdit;
-
-document.getElementById('eSave').onclick = async () => {
-  const c = chapters[currentIndex];
-  const title = document.getElementById('eTitle').value.trim();
-  const date = document.getElementById('eDate').value || null;
-  const content = document.getElementById('eContent').value;
-  const msg = document.getElementById('editMsg');
-  if(!title){ msg.textContent = 'title cannot be empty.'; return; }
-
-  msg.textContent = 'saving…';
-  const { error } = await supabase.from('story_chapters')
-    .update({ title, date, story_content: content || null })
-    .eq('id', c.id);
-
-  if(error){
-    console.error('chapter update error:', error);
-    msg.textContent = 'could not save: ' + (error.message||'');
-    return;
-  }
-  await loadChapters();
-  openChapter(currentIndex);
-};
-
-// ---- delete chapter ----
-const confirmPanel = document.getElementById('confirmPanel');
-document.getElementById('deleteToggle').onclick = () => confirmPanel.classList.add('open');
-document.getElementById('confirmCancel').onclick = () => confirmPanel.classList.remove('open');
-document.getElementById('confirmDelete').onclick = async () => {
-  const c = chapters[currentIndex];
-  const { error } = await supabase.from('story_chapters').delete().eq('id', c.id);
-  confirmPanel.classList.remove('open');
-  if(error){ console.error('delete error:', error); return; }
-  await loadChapters();
-  closeIndexToList();
-};
-
-// ---- add new chapter ----
-const sheetPanel = document.getElementById('sheetPanel');
-document.getElementById('addBtn').onclick = () => {
-  const nextNum = chapters.length ? Math.max(...chapters.map(c=>c.chapter_number))+1 : 1;
-  document.getElementById('fNumber').value = nextNum;
-  sheetPanel.classList.add('open');
-};
-document.getElementById('fCancel').onclick = () => closeSheet();
-sheetPanel.addEventListener('click', e => { if(e.target===sheetPanel) closeSheet(); });
-function closeSheet(){
-  sheetPanel.classList.remove('open');
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fDate').value = '';
-  document.getElementById('fContent').value = '';
-  document.getElementById('formMsg').textContent = '';
-}
-
-document.getElementById('fSubmit').onclick = async () => {
-  const chapter_number = parseInt(document.getElementById('fNumber').value, 10);
-  const title = document.getElementById('fTitle').value.trim();
-  const date = document.getElementById('fDate').value || null;
-  const content = document.getElementById('fContent').value || null;
-  const msg = document.getElementById('formMsg');
-  if(!title){ msg.textContent = 'give the chapter a title.'; return; }
-
-  const btn = document.getElementById('fSubmit');
-  btn.disabled = true;
-  msg.textContent = 'saving…';
-
-  const { error } = await supabase.from('story_chapters').insert({
-    chapter_number, title, date, story_content: content
-  });
-
-  btn.disabled = false;
-  if(error){
-    console.error('chapter save error:', error);
-    msg.textContent = 'could not save: ' + (error.message||'unknown error');
-    return;
-  }
-  msg.textContent = '✓ saved';
-  setTimeout(() => { closeSheet(); loadChapters(); }, 400);
-};
 
 loadChapters();
 </script>

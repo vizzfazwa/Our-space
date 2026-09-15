@@ -192,25 +192,6 @@
   <div class="status" id="status">loading memories…</div>
 </div>
 
-<button class="fab" id="uploadFab">+ UPLOAD</button>
-
-<div class="upload-panel" id="uploadPanel">
-  <div class="upload-sheet">
-    <h3>Add to the gallery</h3>
-    <div class="upload-choices">
-      <button class="upload-choice" id="choosePhoto">📷 PHOTO</button>
-      <button class="upload-choice" id="chooseVideo">🎥 VIDEO</button>
-    </div>
-    <div class="upload-progress" id="uploadProgress">
-      <div class="progress-track"><div class="progress-fill"></div></div>
-      <div class="progress-text" id="progressText">uploading…</div>
-    </div>
-    <button class="upload-cancel" id="uploadCancel">CANCEL</button>
-  </div>
-  <input type="file" id="fileImage" accept="image/*" hidden>
-  <input type="file" id="fileVideo" accept="video/*" hidden>
-</div>
-
 <div class="viewer" id="viewer">
   <div class="viewer-stage" id="viewerStage">
     <div class="viewer-top">
@@ -256,7 +237,7 @@ function renderWall(){
   if(items.length === 0){
     const s = document.createElement('div');
     s.className = 'status';
-    s.textContent = 'no memories uploaded yet — tap + UPLOAD to add the first one.';
+    s.textContent = 'no memories uploaded yet.';
     wall.appendChild(s);
     return;
   }
@@ -311,66 +292,6 @@ function renderViewer(){
 document.getElementById('viewerClose').onclick = () => { viewer.classList.remove('open'); viewerMedia.innerHTML=''; };
 document.getElementById('viewerPrev').onclick = () => { currentIndex = (currentIndex - 1 + items.length) % items.length; renderViewer(); };
 document.getElementById('viewerNext').onclick = () => { currentIndex = (currentIndex + 1) % items.length; renderViewer(); };
-
-// ---- upload flow ----
-const uploadFab = document.getElementById('uploadFab');
-const uploadPanel = document.getElementById('uploadPanel');
-const uploadProgress = document.getElementById('uploadProgress');
-const progressText = document.getElementById('progressText');
-const fileImage = document.getElementById('fileImage');
-const fileVideo = document.getElementById('fileVideo');
-
-uploadFab.onclick = () => uploadPanel.classList.add('open');
-document.getElementById('uploadCancel').onclick = () => uploadPanel.classList.remove('open');
-uploadPanel.addEventListener('click', e => { if(e.target === uploadPanel) uploadPanel.classList.remove('open'); });
-document.getElementById('choosePhoto').onclick = () => fileImage.click();
-document.getElementById('chooseVideo').onclick = () => fileVideo.click();
-
-fileImage.addEventListener('change', e => { if(e.target.files[0]) doUpload(e.target.files[0], 'image'); });
-fileVideo.addEventListener('change', e => { if(e.target.files[0]) doUpload(e.target.files[0], 'video'); });
-
-async function doUpload(file, type){
-  uploadProgress.classList.add('show');
-  progressText.textContent = 'uploading…';
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-  const path = `${type}/${Date.now()}_${safeName}`;
-
-  const { error: upErr } = await supabase.storage.from('gallery').upload(path, file, {
-    cacheControl: '3600',
-    upsert: false
-  });
-
-  if(upErr){
-    progressText.textContent = 'upload failed — try again.';
-    setTimeout(() => uploadProgress.classList.remove('show'), 1800);
-    return;
-  }
-
-  const { data: pub } = supabase.storage.from('gallery').getPublicUrl(path);
-
-  const { error: insErr } = await supabase.from('gallery_items').insert({
-    media_url: pub.publicUrl,
-    media_type: type,
-    media_name: file.name
-  });
-
-  if(insErr){
-    progressText.textContent = 'saved file, but could not add it to the wall.';
-    setTimeout(() => uploadProgress.classList.remove('show'), 2200);
-    return;
-  }
-
-  progressText.textContent = '✓ uploaded';
-  setTimeout(() => {
-    uploadProgress.classList.remove('show');
-    uploadPanel.classList.remove('open');
-    fileImage.value = '';
-    fileVideo.value = '';
-  }, 700);
-
-  loadGallery();
-}
 
 loadGallery();
 </script>

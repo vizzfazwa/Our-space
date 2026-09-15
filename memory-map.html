@@ -177,31 +177,6 @@
   <div class="nodes" id="nodesEl"></div>
 </div>
 
-<div class="add-wrap">
-  <button class="add-btn" id="addBtn">＋ ADD MEMORY</button>
-</div>
-
-<div class="modal-panel" id="modalPanel">
-  <div class="modal">
-    <h3>＋ ADD MEMORY</h3>
-    <div class="field">
-      <label>HEADLINE</label>
-      <input type="text" id="fHeadline" placeholder="e.g. THE DAY WE MET AGAIN">
-    </div>
-    <div class="field">
-      <label>ICON</label>
-      <div class="icon-grid" id="iconGrid"></div>
-    </div>
-    <div class="field">
-      <label>POSITION</label>
-      <div class="position-note">AUTO — added to the end of the journey</div>
-    </div>
-    <button class="modal-submit" id="mSubmit">ADD MEMORY</button>
-    <button class="modal-cancel" id="mCancel">CANCEL</button>
-    <div class="form-msg" id="formMsg"></div>
-  </div>
-</div>
-
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
@@ -210,7 +185,6 @@ const SUPABASE_URL = 'https://yesfebylerfhofhybtdp.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8rlJJfAHpciqCHvA1VmLAA_uWzj-p4w';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ICON_CHOICES = ['❤️','👀','💬','✨','💔','🌙','📸','🎵','📖','⭐'];
 const ANIM_MAP = { '👀':'anim-blink', '❤️':'anim-heartbeat', '💬':'anim-bounce', '✨':'anim-sparkle', '💔':'anim-shake', '🌙':'anim-fade', '📸':'anim-pop' };
 
 const nodesEl = document.getElementById('nodesEl');
@@ -351,59 +325,6 @@ function spawnSparkles(iconEl){
     setTimeout(() => s.remove(), 950);
   }
 }
-
-// ---- add memory modal ----
-const modalPanel = document.getElementById('modalPanel');
-const iconGrid = document.getElementById('iconGrid');
-let selectedIcon = ICON_CHOICES[0];
-
-ICON_CHOICES.forEach((ic,i) => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'icon-choice' + (i===0 ? ' selected':'');
-  b.textContent = ic;
-  b.onclick = () => {
-    selectedIcon = ic;
-    [...iconGrid.children].forEach(el=>el.classList.remove('selected'));
-    b.classList.add('selected');
-  };
-  iconGrid.appendChild(b);
-});
-
-document.getElementById('addBtn').onclick = () => modalPanel.classList.add('open');
-document.getElementById('mCancel').onclick = () => closeModal();
-modalPanel.addEventListener('click', e => { if(e.target===modalPanel) closeModal(); });
-function closeModal(){
-  modalPanel.classList.remove('open');
-  document.getElementById('fHeadline').value = '';
-  document.getElementById('formMsg').textContent = '';
-  selectedIcon = ICON_CHOICES[0];
-  [...iconGrid.children].forEach((el,i)=>el.classList.toggle('selected', i===0));
-}
-
-document.getElementById('mSubmit').onclick = async () => {
-  const headline = document.getElementById('fHeadline').value.trim().toUpperCase();
-  const msg = document.getElementById('formMsg');
-  if(!headline){ msg.textContent = 'give it a headline.'; return; }
-
-  const btn = document.getElementById('mSubmit');
-  btn.disabled = true;
-  msg.textContent = 'adding…';
-
-  const maxOrder = nodesData.length ? Math.max(...nodesData.map(n=>n.order_index)) : 0;
-  const { error } = await supabase.from('memory_map_nodes').insert({
-    headline, icon: selectedIcon, order_index: maxOrder + 1, is_anchor: false
-  });
-
-  btn.disabled = false;
-  if(error){
-    console.error('memory map save error:', error);
-    msg.textContent = 'could not save: ' + (error.message || 'unknown error');
-    return;
-  }
-  msg.textContent = '✓ added';
-  setTimeout(() => { closeModal(); loadNodes(); }, 400);
-};
 
 loadNodes();
 </script>
