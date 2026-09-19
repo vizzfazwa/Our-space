@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+  // don't render this page unless the lock screen has been passed this session
+  if (sessionStorage.getItem('story_unlocked') !== '1') {
+    location.replace('lock-screen.html');
+  }
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Our Story</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
