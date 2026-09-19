@@ -384,6 +384,19 @@ async function doGalleryUpload(file, type){
   setTimeout(() => { uploadModal.classList.remove('open'); msg.textContent=''; loadGallery(); }, 600);
 }
 
+const CALENDAR_TYPE_ICONS = [
+  {key:'love', icon:'❤️', label:'Love'},
+  {key:'eye', icon:'👀', label:'Eye'},
+  {key:'special', icon:'✨', label:'Special'},
+  {key:'birthday', icon:'🎂', label:'Birthday'},
+  {key:'conversation', icon:'💬', label:'Talk'},
+  {key:'photo', icon:'📸', label:'Photo'},
+  {key:'song', icon:'🎵', label:'Song'},
+  {key:'difficult', icon:'💔', label:'Hard'},
+  {key:'story', icon:'📖', label:'Story'},
+  {key:'other', icon:'⭐', label:'Other'}
+];
+
 // ============ CALENDAR ============
 async function loadCalendar(){
   const panel = document.getElementById('panel-calendar');
@@ -419,7 +432,7 @@ document.getElementById('panel-calendar').addEventListener('click', e => {
       title:'Add New Memory',
       fields:[
         {key:'memory_date', label:'DATE', type:'date', value:new Date().toISOString().slice(0,10)},
-        {key:'types', label:'TYPES (comma-separated: love, eye, special, birthday, conversation, photo, song, difficult, story, other)', type:'text', value:'other'},
+        {key:'types', label:'TYPES (pick 1–2)', type:'icon-multi', options:CALENDAR_TYPE_ICONS, value:'other'},
         {key:'title', label:'TITLE', type:'text', value:''},
         {key:'description', label:'DESCRIPTION (optional)', type:'textarea', value:''}
       ],
@@ -439,7 +452,7 @@ document.getElementById('panel-calendar').addEventListener('click', e => {
       title:'Edit Memory',
       fields:[
         {key:'memory_date', label:'DATE', type:'date', value:item.memory_date},
-        {key:'types', label:'TYPES (comma-separated)', type:'text', value:item.types},
+        {key:'types', label:'TYPES (pick 1–2)', type:'icon-multi', options:CALENDAR_TYPE_ICONS, value:item.types},
         {key:'title', label:'TITLE', type:'text', value:item.title},
         {key:'description', label:'DESCRIPTION', type:'textarea', value:item.description||''}
       ],
@@ -679,10 +692,12 @@ const modalPanel = document.getElementById('modalPanel');
 const modalFields = document.getElementById('modalFields');
 const modalMsg = document.getElementById('modalMsg');
 let currentSave = null;
+let modalMultiState = {};
 
 function openModal({ title, fields, onSave }){
   document.getElementById('modalTitle').textContent = title;
   modalMsg.textContent = '';
+  modalMultiState = {};
   modalFields.innerHTML = fields.map(f => {
     if(f.type==='textarea'){
       return `<div class="field"><label>${f.label}</label><textarea data-key="${f.key}">${escapeHtml(f.value||'')}</textarea></div>`;
@@ -695,8 +710,38 @@ function openModal({ title, fields, onSave }){
     if(f.type==='checkbox'){
       return `<div class="field checkline"><input type="checkbox" data-key="${f.key}" id="chk-${f.key}" ${f.value?'checked':''}><label for="chk-${f.key}">${f.label}</label></div>`;
     }
+    if(f.type==='icon-multi'){
+      const selected = String(f.value||'').split(',').map(s=>s.trim()).filter(Boolean);
+      modalMultiState[f.key] = selected;
+      return `<div class="field"><label>${f.label}</label><div class="cat-grid" data-multi-key="${f.key}">
+        ${f.options.map(o=>`<button type="button" class="cat-toggle" data-value="${o.key}" data-max="${f.max||2}" style="${selected.includes(o.key)?'border-color:var(--brass);color:var(--brass);background:rgba(201,162,39,0.08);':''}">${o.icon} ${o.label}</button>`).join('')}
+      </div></div>`;
+    }
     return `<div class="field"><label>${f.label}</label><input type="${f.type}" data-key="${f.key}" value="${escapeHtml(String(f.value ?? ''))}"></div>`;
   }).join('');
+
+  modalFields.querySelectorAll('[data-multi-key]').forEach(group => {
+    const key = group.dataset.multiKey;
+    group.querySelectorAll('button[data-value]').forEach(btn => {
+      btn.onclick = () => {
+        const val = btn.dataset.value;
+        const max = parseInt(btn.dataset.max, 10) || 2;
+        const cur = modalMultiState[key] || [];
+        const idx = cur.indexOf(val);
+        if(idx > -1){
+          cur.splice(idx, 1);
+        } else if(cur.length < max){
+          cur.push(val);
+        }
+        modalMultiState[key] = cur;
+        group.querySelectorAll('button[data-value]').forEach(b => {
+          const on = cur.includes(b.dataset.value);
+          b.style.cssText = on ? 'border-color:var(--brass);color:var(--brass);background:rgba(201,162,39,0.08);' : '';
+        });
+      };
+    });
+  });
+
   currentSave = onSave;
   modalPanel.classList.add('open');
 }
@@ -709,6 +754,9 @@ document.getElementById('modalSave').onclick = async () => {
     if(el.type==='checkbox') vals[el.dataset.key] = el.checked;
     else if(el.type==='number') vals[el.dataset.key] = parseInt(el.value,10);
     else vals[el.dataset.key] = el.value;
+  });
+  Object.keys(modalMultiState).forEach(key => {
+    vals[key] = modalMultiState[key].join(',');
   });
   const btn = document.getElementById('modalSave');
   btn.disabled = true;
