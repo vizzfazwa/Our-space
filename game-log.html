@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>
+  if (sessionStorage.getItem('story_unlocked') !== '1') {
+    location.replace('lock-screen.html');
+  }
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Little World — Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0c0a08;--paper:#f3ead6;--paper-dim:rgba(243,234,214,.55);--paper-faint:rgba(243,234,214,.16);--brass:#c9a227;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{background:var(--ink);}
+  body{background:var(--ink);color:var(--paper);font-family:'Space Mono',monospace;padding:44px 20px 70px;}
+  .wrap{max-width:560px;margin:0 auto;}
+  .hero{text-align:center;padding:10px 0 36px;}
+  .hero h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2.1rem,9vw,3rem);line-height:1;}
+  .hero p{font-family:'Fraunces',serif;font-style:italic;color:var(--paper-dim);margin-top:10px;font-size:.92rem;}
+  .section-title{font-family:'Fraunces',serif;font-weight:700;font-size:1.22rem;margin:38px 0 14px;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .stat{border:1px solid var(--paper-faint);padding:14px;}
+  .stat b{display:block;font-family:'Fraunces',serif;font-size:1.45rem;font-weight:700;}
+  .stat span{font-size:.62rem;color:var(--paper-dim);letter-spacing:.05em;}
+  .timeline{border-left:1px solid var(--paper-faint);padding-left:18px;display:flex;flex-direction:column;gap:18px;}
+  .t-item{position:relative;}
+  .t-item::before{content:'';position:absolute;left:-23px;top:3px;width:9px;height:9px;border-radius:50%;background:var(--ink);border:1px solid var(--paper-faint);}
+  .t-item.done::before{background:var(--brass);border-color:var(--brass);}
+  .t-item .e{font-size:1.25rem;}
+  .t-item h4{font-family:'Fraunces',serif;font-size:.98rem;margin:3px 0 2px;}
+  .t-item .d{font-size:.64rem;color:var(--paper-dim);}
+  .t-item.locked{opacity:.4;}
+  .ach-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .ach{border:1px solid var(--paper-faint);padding:10px 4px;text-align:center;font-size:.58rem;}
+  .ach .e{font-size:1.35rem;display:block;margin-bottom:4px;}
+  .ach.locked{opacity:.35;}
+  .pbar{height:5px;background:var(--paper-faint);margin:6px 0 14px;}
+  .pbar i{display:block;height:100%;background:var(--brass);}
+  .row{display:flex;justify-content:space-between;font-size:.76rem;padding:8px 0;border-bottom:1px dashed var(--paper-faint);}
+  .back{display:block;text-align:center;margin-top:52px;color:var(--paper-dim);text-decoration:none;font-size:.7rem;letter-spacing:.05em;}
+  .empty{font-size:.74rem;color:var(--paper-dim);text-align:center;padding:18px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>OUR LITTLE WORLD</h1>
+    <p>A tiny world, built one little action at a time.</p>
+  </div>
+
+  <div class="section-title">📊 Summary</div>
+  <div class="stat-grid" id="statGrid"></div>
+
+  <div class="section-title">🌍 How this little world grew</div>
+  <div class="timeline" id="timeline"></div>
+
+  <div class="section-title">🏆 Achievements</div>
+  <div class="ach-grid" id="achGrid"></div>
+
+  <div class="section-title">👤 Contribution</div>
+  <div id="contrib"></div>
+
+  <div class="section-title">🛍️ Things we built</div>
+  <div id="purchases"></div>
+
+  <div class="section-title">🖱️ Action log</div>
+  <div id="actionsBreak"></div>
+
+  <a class="back" href="our_space.html">← back to our space</a>
+</div>
+
+<script>
+const SB='https://yesfebylerfhofhybtdp.supabase.co';
+const SKEY='sb_publishable_8rlJJfAHpciqCHvA1VmLAA_uWzj-p4w';
+async function api(path){
+  try{
+    const r=await fetch(SB+'/rest/v1/'+path,{headers:{apikey:SKEY,Authorization:'Bearer '+SKEY}});
+    return await r.json();
+  }catch(e){return null;}
+}
+const NAMES={fawaz:'🧸 Fawaz',pathumma:'👰🏻\u200d♀️ Vismaya'};
+// mirrors the ACH list in our-little-world.html — keep these two in sync if that file changes
+const ACH=[
+ {id:'first',e:'🌱',n:'First Life'},
+ {id:'care5',e:'💧',n:'Caretaker'},
+ {id:'gardenfull',e:'🌸',n:'Green Thumb'},
+ {id:'firsttree',e:'🪓',n:'Woodcutter'},
+ {id:'forest',e:'🌳',n:'Rooted'},
+ {id:'wall',e:'🧱',n:'Our Boundary'},
+ {id:'house',e:'🏡',n:'Home Builder'},
+ {id:'pool',e:'🏊',n:'Splash'},
+ {id:'furn',e:'🛋️',n:'Cozy Corner'},
+ {id:'pet',e:'🐶',n:'New Friend'},
+ {id:'petgrown',e:'🐕',n:'Big Boy'},
+ {id:'click100',e:'👆',n:'100 Clicks'},
+ {id:'click500',e:'👆',n:'500 Clicks'},
+ {id:'streak3',e:'🔥',n:'3-Day Streak'},
+ {id:'streak7',e:'🔥',n:'7-Day Streak'}
+];
+const MILESTONES=[
+ {ach:'first',e:'🌱',n:'First seed'},
+ {ach:'gardenfull',e:'🌸',n:'First garden'},
+ {ach:'forest',e:'🌳',n:'First trees'},
+ {ach:'wall',e:'🧱',n:'Our boundary'},
+ {ach:'house',e:'🏡',n:'Our home'},
+ {ach:'pool',e:'🏊',n:'Our pool'},
+ {ach:'furn',e:'🛋️',n:'Cozy corner'},
+ {ach:'pet',e:'🐶',n:'Our little friend'},
+ {ach:'petgrown',e:'🐕',n:'All grown up'}
+];
+
+(async function(){
+  let state={},events=[];
+  const stateRows=await api('game_state?id=eq.1&select=state');
+  if(stateRows&&stateRows[0])state=stateRows[0].state||{};
+  const evRows=await api('game_events?select=*&order=created_at.asc&limit=3000');
+  if(Array.isArray(evRows))events=evRows;
+
+  const hasData=Object.keys(state).length>0;
+  const g=state.garden||{},tr=state.trees||{},wl=state.wall||{},hs=state.house||{},
+        pl=state.pool||{},fn=state.furn||{},pt=state.pet||{},ach=state.ach||{},
+        spent=state.spent||{},streak=state.streak||{},acts=state.actions||{};
+
+  function fmtDay(d){return d?new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):null;}
+  function firstDayFor(name){const e=events.find(ev=>ev.kind==='achievement'&&ev.label&&ev.label.indexOf(name)>-1);return e?fmtDay(e.day):null;}
+
+  // ---- summary ----
+  let doneCount=0;
+  if((g.owned||0)>=8)doneCount++;
+  if((tr.owned||0)>=4)doneCount++;
+  if(wl.built)doneCount++;
+  if(hs.built)doneCount++;
+  if(pl.built)doneCount++;
+  if(fn.built)doneCount++;
+  if(pt.built)doneCount++;
+  const worldPct=Math.round(doneCount/7*100);
+  const totalSpent=Object.values(spent).reduce((a,b)=>a+b,0);
+
+  document.getElementById('statGrid').innerHTML=[
+    ['Level',state.level||1],['Total XP',state.xp||0],['Coins now',state.coins||0],
+    ['Coins spent','₹'+totalSpent],['World complete',worldPct+'%'],['Total actions',state.totalClicks||0],
+    ['Current streak',(streak.current||0)+' days'],['Longest streak',(streak.longest||0)+' days'],['Active days',streak.activeDays||0]
+  ].map(([k,v])=>'<div class="stat"><b>'+v+'</b><span>'+k+'</span></div>').join('');
+
+  // ---- timeline ----
+  document.getElementById('timeline').innerHTML = hasData ? MILESTONES.map(m=>{
+    const unlocked=!!ach[m.ach];
+    const achName=(ACH.find(a=>a.id===m.ach)||{}).n||'';
+    const day=unlocked?firstDayFor(achName):null;
+    return '<div class="t-item '+(unlocked?'done':'locked')+'"><span class="e">'+m.e+'</span><h4>'+m.n+'</h4><div class="d">'+(unlocked?(day||'unlocked'):'not yet')+'</div></div>';
+  }).join('') : '<div class="empty">The story hasn\u2019t started yet — once you two begin playing, it\u2019ll grow here. 🤍</div>';
+
+  // ---- achievements ----
+  document.getElementById('achGrid').innerHTML = ACH.map(a=>{
+    const on=!!ach[a.id];
+    return '<div class="ach '+(on?'':'locked')+'"><span class="e">'+(on?a.e:'❓')+'</span>'+(on?a.n:'???')+'</div>';
+  }).join('');
+
+  // ---- contribution ----
+  const fa=acts.fawaz||0,va=acts.pathumma||0,totalActs=(fa+va)||1;
+  document.getElementById('contrib').innerHTML =
+    '<div class="row"><span>'+NAMES.fawaz+'</span><b>'+fa+' actions</b></div><div class="pbar"><i style="width:'+Math.round(fa/totalActs*100)+'%"></i></div>'+
+    '<div class="row"><span>'+NAMES.pathumma+'</span><b>'+va+' actions</b></div><div class="pbar"><i style="width:'+Math.round(va/totalActs*100)+'%"></i></div>';
+
+  // ---- purchases (authoritative counts from game state, not the event log) ----
+  const items=[
+    ['🌱 Seeds',g.owned||0,spent.seed||0],
+    ['🪓 Axe',(tr.hasAxe||(tr.owned||0)>0)?1:0,spent.axe||0],
+    ['🧱 Wall kit',wl.hasTool?1:0,spent.wall||0],
+    ['🧰 Tool kit',hs.hasTool?1:0,spent.house||0],
+    ['🏊 Pool kit',pl.hasTool?1:0,spent.pool||0],
+    ['🛋️ Furniture',fn.hasTool?1:0,spent.furn||0],
+    ['🐶 Puppy',pt.hasPet?1:0,spent.pet||0],
+    ['🏠 Doghouse kit',pt.hasDog?1:0,spent.dog||0]
+  ].filter(x=>x[1]>0);
+  document.getElementById('purchases').innerHTML = items.length ?
+    items.map(x=>'<div class="row"><span>'+x[0]+' × '+x[1]+'</span><b>₹'+x[2]+'</b></div>').join('')+'<div class="row"><span>Total spent</span><b>₹'+totalSpent+'</b></div>'
+    : '<div class="empty">Nothing bought yet.</div>';
+
+  // ---- action breakdown from the event log ----
+  const counts={};
+  events.forEach(ev=>{if(ev.kind==='action'||ev.kind==='purchase'){const k=ev.label||'Other';counts[k]=(counts[k]||0)+1;}});
+  const keys=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  document.getElementById('actionsBreak').innerHTML = keys.length ?
+    keys.map(k=>'<div class="row"><span>'+k+'</span><b>'+counts[k]+'</b></div>').join('')
+    : '<div class="empty">No actions logged yet — once you start playing, every little moment will show up here 🤍</div>';
+})();
+</script>
+</body>
+</html>
