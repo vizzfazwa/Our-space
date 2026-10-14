@@ -2,423 +2,216 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  if (sessionStorage.getItem('story_unlocked') !== '1') {
+    location.replace('lock-screen.html');
+  }
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Message History — Our Story</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Fraunces:wght@600;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
-  :root{
-    --ink:#0a0908;
-    --ink-2:#131110;
-    --paper:#eae3d2;
-    --paper-dim:rgba(234,227,210,0.55);
-    --paper-faint:rgba(234,227,210,0.12);
-    --brass:#c9a227;
-    --rose:#c9707a;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{background:var(--ink);height:100%;}
-  body{
-    color:var(--paper);
-    font-family:'Space Mono',monospace;
-    display:flex;flex-direction:column;
-    min-height:100vh;
-  }
-  /* scanlines */
-  body::before{
-    content:'';
-    position:fixed;inset:0;z-index:5;pointer-events:none;
-    background:repeating-linear-gradient(
-      to bottom,
-      rgba(255,255,255,0.02) 0px,
-      rgba(255,255,255,0.02) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-    mix-blend-mode:overlay;
-  }
+:root{
+  --deep-purple:#141318;--soft-purple:#8d7c9c;--rose-gold:#c99383;--ink:#f3eef0;--muted:#a79fa9;
+  --card-bg:#151317;--glow:0 0 22px rgba(201,147,131,.14);
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;font-family:'Quicksand',sans-serif;color:var(--ink);}
+body{
+  background:radial-gradient(120% 70% at 50% -10%, rgba(201,147,131,.09), transparent 60%),
+             radial-gradient(90% 60% at 100% 100%, rgba(141,124,156,.08), transparent 60%),
+             linear-gradient(160deg,#0d0b10,#08070a 55%,#020202);
+  min-height:100%;
+}
+.hidden{display:none !important;}
+button{cursor:pointer;}
 
-  .topbar{
-    position:sticky;top:0;z-index:10;
-    background:rgba(10,9,8,0.92);
-    backdrop-filter:blur(6px);
-    border-bottom:1px solid var(--paper-faint);
-    padding:16px 18px;
-    display:flex;align-items:center;justify-content:space-between;
-  }
-  .back{
-    color:var(--paper-dim);
-    text-decoration:none;
-    font-size:0.72rem;
-    letter-spacing:0.05em;
-  }
-  .back:hover{color:var(--brass);}
-  .title{
-    font-size:0.72rem;
-    letter-spacing:0.1em;
-    color:var(--brass);
-  }
-  .title::before{content:'● '; color:#7a5f18;}
+/* log page */
+#logPage{max-width:640px;margin:0 auto;padding:18px 14px 60px;}
+#logHeader{text-align:center;margin-bottom:22px;}
+#logHeader .t{font-family:'Playfair Display',serif;font-style:italic;font-size:22px;color:var(--rose-gold);}
+#logHeader .s{font-size:12px;color:var(--muted);margin-top:4px;}
+.navrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:12px;}
+.navrow a{color:var(--muted);text-decoration:none;}
+.navrow a:hover{color:var(--rose-gold);}
+.daysep{text-align:center;font-size:11.5px;color:var(--muted);background:rgba(255,255,255,.05);display:inline-block;padding:5px 14px;border-radius:12px;margin:20px auto 12px;position:sticky;top:8px;z-index:2;}
+.daysep-wrap{display:flex;justify-content:center;}
+.entry{display:flex;gap:10px;padding:12px;border-radius:16px;background:var(--card-bg);border:1px solid rgba(201,147,131,.1);box-shadow:var(--glow);margin-bottom:10px;}
+.entry .ic{font-size:18px;flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;}
+.entry .body{flex:1;min-width:0;}
+.entry .who{font-size:12.5px;font-weight:600;}
+.entry .what{font-size:13.5px;color:var(--ink);margin-top:2px;word-break:break-word;}
+.entry .when{font-size:10.5px;color:var(--muted);margin-top:4px;}
+.entry .thumb{margin-top:8px;max-width:160px;border-radius:10px;display:block;cursor:pointer;}
+.entry .vid-thumb{margin-top:8px;width:160px;height:100px;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;}
+.entry audio.logaudio{margin-top:8px;max-width:220px;}
+#emptyState{text-align:center;color:var(--muted);font-size:13px;margin-top:40px;}
+#loadMore{display:block;margin:18px auto;padding:10px 20px;border-radius:14px;border:1px solid rgba(201,147,131,.25);background:rgba(255,255,255,.04);color:var(--ink);font-size:13px;}
 
-  .controls{
-    position:sticky;top:49px;z-index:9;
-    background:rgba(10,9,8,0.92);
-    backdrop-filter:blur(6px);
-    padding:10px 18px 14px;
-    border-bottom:1px solid var(--paper-faint);
-  }
-  #searchInput{
-    width:100%;
-    background:var(--ink-2);
-    border:1px solid var(--paper-faint);
-    color:var(--paper);
-    font-family:'Space Mono',monospace;
-    font-size:0.8rem;
-    padding:10px 12px;
-    outline:none;
-  }
-  #searchInput:focus{border-color:var(--brass);}
-  #searchInput::placeholder{color:var(--paper-dim);}
-  .filters{
-    display:flex;flex-wrap:wrap;gap:6px;
-    margin-top:10px;
-  }
-  .chip{
-    font-family:'Space Mono',monospace;
-    font-size:0.65rem;
-    letter-spacing:0.04em;
-    color:var(--paper-dim);
-    background:transparent;
-    border:1px solid var(--paper-faint);
-    padding:6px 10px;
-    cursor:pointer;
-  }
-  .chip.active{
-    color:var(--ink);
-    background:var(--brass);
-    border-color:var(--brass);
-  }
-
-  main{
-    flex:1;
-    padding:20px 16px 40px;
-    max-width:640px;
-    width:100%;
-    margin:0 auto;
-  }
-  .status{
-    color:var(--paper-dim);
-    font-size:0.75rem;
-    padding:30px 4px;
-    text-align:center;
-    line-height:1.7;
-  }
-
-  .msg{
-    margin-bottom:22px;
-    animation:msgIn 0.35s ease both;
-  }
-  @keyframes msgIn{
-    from{opacity:0;transform:translateY(6px);}
-    to{opacity:1;transform:translateY(0);}
-  }
-  .msg-meta{
-    display:flex;align-items:baseline;gap:10px;
-    margin-bottom:5px;
-    font-size:0.68rem;
-    letter-spacing:0.04em;
-  }
-  .msg-sender{font-weight:700;}
-  .msg-time{color:var(--paper-dim);}
-  .msg-body{
-    font-size:0.85rem;
-    line-height:1.6;
-    color:var(--paper);
-    white-space:pre-wrap;
-    word-break:break-word;
-  }
-  .msg-media{
-    margin-top:8px;
-  }
-  .thumb{
-    max-width:220px;max-height:220px;
-    border:1px solid var(--paper-faint);
-    cursor:pointer;
-    display:block;
-  }
-  .file-chip{
-    display:inline-flex;align-items:center;gap:8px;
-    border:1px solid var(--paper-faint);
-    padding:8px 12px;
-    font-size:0.72rem;
-    color:var(--paper-dim);
-    text-decoration:none;
-  }
-  .file-chip:hover{border-color:var(--brass);color:var(--brass);}
-
-  .voice-row{
-    display:flex;align-items:center;gap:10px;
-    border:1px solid var(--paper-faint);
-    padding:8px 12px;
-    width:fit-content;
-  }
-  .voice-btn{
-    background:none;border:none;color:var(--brass);
-    font-family:'Space Mono',monospace;
-    font-size:0.75rem;cursor:pointer;
-    letter-spacing:0.05em;
-  }
-  .voice-btn:disabled{opacity:0.5;cursor:default;}
-  .voice-status{font-size:0.65rem;color:var(--paper-dim);}
-
-  .viewer{
-    position:fixed;inset:0;z-index:100;
-    background:rgba(0,0,0,0.94);
-    display:none;
-    align-items:center;justify-content:center;
-    padding:24px;
-  }
-  .viewer.open{display:flex;}
-  .viewer img, .viewer video{
-    max-width:100%;max-height:100%;
-  }
-  .viewer-close{
-    position:absolute;top:20px;right:20px;
-    background:none;border:1px solid var(--paper-faint);
-    color:var(--paper);
-    font-family:'Space Mono',monospace;
-    font-size:0.8rem;
-    padding:8px 12px;
-    cursor:pointer;
-  }
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:flex;align-items:center;justify-content:center;}
+.lightbox img,.lightbox video{max-width:94vw;max-height:88vh;border-radius:8px;}
+.lightbox-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;background:rgba(255,255,255,.1);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:16px;}
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <a class="back" href="index.html">← BACK</a>
-  <span class="title">MESSAGE_HISTORY.LOG</span>
-  <span style="width:52px;"></span>
-</header>
-
-<div class="controls">
-  <input id="searchInput" type="text" placeholder="search messages...">
-  <div class="filters" id="filters"></div>
+<div id="logPage">
+  <div class="navrow">
+    <a href="index.html">← Our Space</a>
+    <a href="https://vizzfazwa.github.io/gift-to-her/" target="_blank" rel="noopener">💬 Open For You ↗</a>
+  </div>
+  <div id="logHeader">
+    <div class="t">Message History</div>
+    <div class="s">Every message, permanently, in order.</div>
+  </div>
+  <div id="entries"></div>
+  <div id="emptyState" class="hidden">Nothing logged yet.</div>
+  <button id="loadMore" class="hidden">Load older entries</button>
 </div>
 
-<main id="log">
-  <div class="status" id="status">loading archive…</div>
-</main>
+<script>
+const SUPABASE_URL = "https://qrtzkmbdjuubzegcuadu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_VtUutzytoRnAxrjy5NblhA_r_b2YQAB";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-<div class="viewer" id="viewer">
-  <button class="viewer-close" id="viewerClose">CLOSE ✕</button>
-  <div id="viewerContent"></div>
-</div>
+const USERS = { fawaz:{emoji:"🧸",name:"Fawaz"}, pathumma:{emoji:"👰🏻\u200d♀️",name:"Vismaya"} };
+let oldestLoaded = null;
+const PAGE_SIZE = 60;
 
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+function el(id){ return document.getElementById(id); }
 
-// ---- config (public anon key — safe to expose client-side) ----
-const SUPABASE_URL = 'https://qrtzkmbdjuubzegcuadu.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_VtUutzytoRnAxrjy5NblhA_r_b2YQAB';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+loadEntries(true);
+subscribeLive();
 
-const SENDER_COLORS = ['#c9a227', '#c9707a', '#7fa88a', '#7f9cc9'];
-function senderColor(sender){
-  const list = [...new Set(allMessages.map(m => (m.sender || '').toLowerCase()))].sort();
-  const idx = list.indexOf((sender || '').toLowerCase());
-  return SENDER_COLORS[idx % SENDER_COLORS.length] || 'var(--paper)';
+function fmtTime(ts){ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(ts){ return new Date(ts).toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short',year:'numeric'}); }
+
+const ICONS = { text:'💬', image:'🖼️', video:'🎥', audio:'🎵', file:'📎', voice:'🎤' };
+
+// messages_archive rows don't carry a type column — the type is inferred from which fields are filled in
+function rowKind(row){
+  if(row.has_voice || row.voice_data) return 'voice';
+  if(row.text_reply) return 'text';
+  if(row.media_type) return row.media_type; // 'image' | 'video' | 'audio' | 'file'
+  return 'text';
 }
 
-let allMessages = [];
-let activeFilter = 'all';
-let searchTerm = '';
-
-const logEl = document.getElementById('log');
-const statusEl = document.getElementById('status');
-const filtersEl = document.getElementById('filters');
-const searchInput = document.getElementById('searchInput');
-const viewer = document.getElementById('viewer');
-const viewerContent = document.getElementById('viewerContent');
-document.getElementById('viewerClose').onclick = () => { viewer.classList.remove('open'); viewerContent.innerHTML=''; };
-viewer.addEventListener('click', e => { if(e.target === viewer){ viewer.classList.remove('open'); viewerContent.innerHTML=''; }});
-
-function fmtTime(iso){
-  if(!iso) return '';
-  const d = new Date(iso);
-  const date = d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-  const time = d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-  return `${date} · ${time}`;
-}
-
-function buildFilters(){
-  const senders = [...new Set(allMessages.map(m => m.sender).filter(Boolean))];
-  const chips = ['all', ...senders, 'image', 'video', 'voice', 'file'];
-  const labels = { all:'ALL', image:'IMAGES', video:'VIDEOS', voice:'VOICE', file:'FILES' };
-  filtersEl.innerHTML = '';
-  chips.forEach(c => {
-    const btn = document.createElement('button');
-    btn.className = 'chip' + (c === activeFilter ? ' active' : '');
-    btn.textContent = labels[c] || c.toUpperCase();
-    btn.onclick = () => { activeFilter = c; render(); };
-    filtersEl.appendChild(btn);
-  });
-}
-
-function matchesFilter(m){
-  if(activeFilter === 'all') return true;
-  if(activeFilter === 'image') return m.media_type === 'image';
-  if(activeFilter === 'video') return m.media_type === 'video';
-  if(activeFilter === 'voice') return !!m.has_voice;
-  if(activeFilter === 'file') return m.media_type && !['image','video'].includes(m.media_type);
-  return (m.sender || '').toLowerCase() === activeFilter.toLowerCase();
-}
-
-function matchesSearch(m){
-  if(!searchTerm) return true;
-  return (m.text_reply || '').toLowerCase().includes(searchTerm);
-}
-
-async function openImage(url){
-  viewerContent.innerHTML = `<img src="${url}" alt="">`;
-  viewer.classList.add('open');
-}
-async function openVideo(url){
-  viewerContent.innerHTML = `<video src="${url}" controls autoplay></video>`;
-  viewer.classList.add('open');
-}
-
-async function playVoice(id, sender, createdAt, btn, statusSpan){
-  btn.disabled = true;
-  statusSpan.textContent = 'loading…';
-
-  let query = supabase.from('messages_archive').select('voice_data');
-  if(id !== null && id !== undefined){
-    query = query.eq('id', id);
-  } else {
-    // some older archived rows lost their id along the way — fall back to matching
-    // on sender + exact timestamp so playback still works for them.
-    query = query.eq('sender', sender).eq('created_at', createdAt).eq('has_voice', true);
+function describe(row){
+  const name = (USERS[row.sender]&&USERS[row.sender].name) || row.sender || 'Someone';
+  switch(rowKind(row)){
+    case 'text': return `${name} sent: "${row.text_reply||''}"`;
+    case 'voice': return `${name} sent a voice message`;
+    case 'image': return `${name} sent a photo`;
+    case 'video': return `${name} sent a video`;
+    case 'audio': return `${name} sent an audio file`;
+    case 'file': return `${name} sent a file${row.media_name?': '+row.media_name:''}`;
+    default: return `${name} sent something`;
   }
-
-  const { data, error } = await query.limit(1).maybeSingle();
-  if(error){
-    console.error('voice fetch error:', error);
-    statusSpan.textContent = 'error: ' + (error.message || error.code || 'unknown');
-    btn.disabled = false;
-    return;
-  }
-  if(!data?.voice_data){
-    statusSpan.textContent = 'no audio saved for this one';
-    btn.disabled = false;
-    return;
-  }
-  const audio = new Audio(data.voice_data);
-  statusSpan.textContent = 'playing…';
-  audio.play();
-  audio.onended = () => { statusSpan.textContent = ''; btn.disabled = false; };
 }
 
-function renderMessage(m){
+function renderEntry(row){
   const wrap = document.createElement('div');
-  wrap.className = 'msg';
-
-  const meta = document.createElement('div');
-  meta.className = 'msg-meta';
-  const senderSpan = document.createElement('span');
-  senderSpan.className = 'msg-sender';
-  senderSpan.textContent = (m.sender || 'unknown').toUpperCase();
-  senderSpan.style.color = senderColor(m.sender);
-  const timeSpan = document.createElement('span');
-  timeSpan.className = 'msg-time';
-  timeSpan.textContent = fmtTime(m.created_at);
-  meta.appendChild(senderSpan);
-  meta.appendChild(timeSpan);
-  wrap.appendChild(meta);
-
-  if(m.text_reply){
-    const body = document.createElement('div');
-    body.className = 'msg-body';
-    body.textContent = m.text_reply;
-    wrap.appendChild(body);
+  wrap.className='entry';
+  wrap.dataset.day = new Date(row.created_at).toDateString();
+  const kind = rowKind(row);
+  const icon = ICONS[kind] || '•';
+  let media = '';
+  if(kind==='image' && row.media_url){
+    media = `<img class="thumb" src="${row.media_url}" onclick="openLightbox('${row.media_url}',false)">`;
+  } else if(kind==='video' && row.media_url){
+    media = `<div class="vid-thumb" onclick="openLightbox('${row.media_url}',true)">▶ Tap to play</div>`;
+  } else if(kind==='audio' && row.media_url){
+    media = `<audio class="logaudio" controls src="${row.media_url}"></audio>`;
+  } else if(kind==='voice' && row.voice_data){
+    media = `<audio class="logaudio" controls src="${row.voice_data}"></audio>`;
+  } else if(kind==='file' && row.media_url){
+    media = `<div style="margin-top:6px;"><a href="${row.media_url}" target="_blank" style="color:var(--rose-gold);">${row.media_name||'Open file'} ↗</a></div>`;
   }
-
-  if(m.media_url){
-    const mediaWrap = document.createElement('div');
-    mediaWrap.className = 'msg-media';
-    if(m.media_type === 'image'){
-      const img = document.createElement('img');
-      img.src = m.media_url; img.className = 'thumb'; img.loading = 'lazy';
-      img.onclick = () => openImage(m.media_url);
-      mediaWrap.appendChild(img);
-    } else if(m.media_type === 'video'){
-      const vid = document.createElement('video');
-      vid.src = m.media_url; vid.className = 'thumb'; vid.muted = true;
-      vid.onclick = () => openVideo(m.media_url);
-      mediaWrap.appendChild(vid);
-    } else {
-      const a = document.createElement('a');
-      a.href = m.media_url; a.target = '_blank'; a.rel = 'noopener';
-      a.className = 'file-chip';
-      a.textContent = '📎 ' + (m.media_name || 'file');
-      mediaWrap.appendChild(a);
-    }
-    wrap.appendChild(mediaWrap);
-  }
-
-  if(m.has_voice){
-    const row = document.createElement('div');
-    row.className = 'voice-row';
-    const btn = document.createElement('button');
-    btn.className = 'voice-btn';
-    btn.textContent = '▶ PLAY VOICE NOTE';
-    const status = document.createElement('span');
-    status.className = 'voice-status';
-    btn.onclick = () => playVoice(m.id, m.sender, m.created_at, btn, status);
-    row.appendChild(btn);
-    row.appendChild(status);
-    wrap.appendChild(row);
-  }
-
+  wrap.innerHTML = `
+    <div class="ic">${icon}</div>
+    <div class="body">
+      <div class="who">${(USERS[row.sender]&&USERS[row.sender].emoji)||''} ${(USERS[row.sender]&&USERS[row.sender].name)||row.sender||''}</div>
+      <div class="what">${esc(describe(row))}</div>
+      ${media}
+      <div class="when">${fmtDate(row.created_at)} · ${fmtTime(row.created_at)}</div>
+    </div>`;
+  wrap._row = row;
   return wrap;
 }
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-function render(){
-  buildFilters();
-  const filtered = allMessages.filter(m => matchesFilter(m) && matchesSearch(m));
-  logEl.innerHTML = '';
-  if(filtered.length === 0){
-    const s = document.createElement('div');
-    s.className = 'status';
-    s.textContent = 'no messages found.';
-    logEl.appendChild(s);
-    return;
-  }
-  filtered.forEach(m => logEl.appendChild(renderMessage(m)));
+function insertWithDaySeparators(rows, container, prepend){
+  let lastDay = container.dataset.lastDay || null;
+  const frag = document.createDocumentFragment();
+  rows.forEach(row=>{
+    const day = new Date(row.created_at).toDateString();
+    if(day!==lastDay){
+      const sepWrap=document.createElement('div'); sepWrap.className='daysep-wrap';
+      const sep=document.createElement('div'); sep.className='daysep'; sep.textContent=fmtDate(row.created_at);
+      sepWrap.appendChild(sep);
+      frag.appendChild(sepWrap);
+      lastDay=day;
+    }
+    frag.appendChild(renderEntry(row));
+  });
+  container.dataset.lastDay = lastDay;
+  if(prepend) container.insertBefore(frag, container.firstChild);
+  else container.appendChild(frag);
 }
 
-searchInput.addEventListener('input', e => {
-  searchTerm = e.target.value.trim().toLowerCase();
-  render();
-});
-
-async function load(){
-  const { data, error } = await supabase
-    .from('messages_archive')
-    .select('id, sender, text_reply, has_voice, media_url, media_type, media_name, created_at')
-    .order('created_at', { ascending: true })
-    .order('id', { ascending: true });
-
-  if(error){
-    statusEl.textContent = 'could not load archive — check connection.';
-    return;
+async function loadEntries(first){
+  const container = el('entries');
+  /* always fetch newest-first from the DB, then flip to chronological order for display */
+  let query = sb.from('messages_archive').select('*').order('created_at',{ascending:false}).limit(PAGE_SIZE);
+  if(oldestLoaded) query = query.lt('created_at', oldestLoaded);
+  const res = await query;
+  const rows = (res.data || []).slice().reverse(); // oldest-of-this-batch first, newest last
+  if(first && rows.length===0){ el('emptyState').classList.remove('hidden'); return; }
+  if(rows.length){
+    oldestLoaded = rows[0].created_at;
+    if(first){
+      container.dataset.lastDay=''; /* reset — this batch is being rendered top-to-bottom fresh */
+      insertWithDaySeparators(rows, container, false);
+      window.scrollTo(0, document.body.scrollHeight);
+    } else {
+      prependWithDaySeparators(rows, container);
+    }
   }
-  allMessages = data || [];
-  render();
-  window.scrollTo(0, document.body.scrollHeight);
+  el('loadMore').classList.toggle('hidden', (res.data||[]).length < PAGE_SIZE);
+}
+function prependWithDaySeparators(rows, container){
+  /* re-render everything from scratch — simplest safe way to keep day separators correct when older history is added above what's already shown */
+  const existing = Array.from(container.querySelectorAll('.entry')).map(elx=>elx._row).filter(Boolean);
+  const all = rows.concat(existing);
+  const scrollBefore = document.body.scrollHeight - window.scrollY;
+  container.innerHTML='';
+  container.dataset.lastDay='';
+  insertWithDaySeparators(all, container, false);
+  window.scrollTo(0, document.body.scrollHeight - scrollBefore);
+}
+el('loadMore').onclick = ()=>loadEntries(false);
+
+function subscribeLive(){
+  sb.channel('log-live')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages_archive'},payload=>{
+      insertWithDaySeparators([payload.new], el('entries'), false);
+      window.scrollTo(0, document.body.scrollHeight);
+    })
+    .subscribe();
 }
 
-load();
+function openLightbox(url,isVideo){
+  const overlay=document.createElement('div');
+  overlay.className='lightbox';
+  overlay.innerHTML = isVideo
+    ? `<video src="${url}" controls autoplay playsinline></video><button class="lightbox-close" type="button">✕</button>`
+    : `<img src="${url}"><button class="lightbox-close" type="button">✕</button>`;
+  overlay.onclick=(e)=>{ if(e.target===overlay||e.target.classList.contains('lightbox-close')) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
 </script>
 </body>
 </html>
