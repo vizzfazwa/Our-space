@@ -26,7 +26,7 @@
   *{margin:0;padding:0;box-sizing:border-box;}
   html{background:var(--ink);}
   body{
-    background:var(--ink);
+    background:transparent; /* wallpaper layers (z-index:-1) sit behind; html keeps --ink as fallback */
     color:var(--paper);
     font-family:'Space Mono',monospace;
     overflow-x:hidden;
@@ -268,12 +268,74 @@
     transform:translate(-50%,0);
   }
 
+
+  /* ===================== WALLPAPER SYSTEM ===================== */
+  .bg-base,.bg-layer,.bg-overlay{
+    position:fixed;left:0;top:0;width:100%;
+    height:100vh;height:100lvh;
+    pointer-events:none;
+  }
+  .bg-base{z-index:-4;background:#051F20;} /* Deep Forest default */
+  .bg-layer{
+    z-index:-3;
+    background-size:cover;background-position:center center;background-repeat:no-repeat;
+    opacity:0;
+    transition:opacity 0.9s ease;
+    will-change:opacity;
+  }
+  .bg-layer.on{opacity:1;}
+  .bg-overlay{
+    z-index:-2;
+    background:rgba(4,8,8,0.6); /* ~60% dark overlay, background layer only */
+    opacity:1;
+    transition:opacity 0.9s ease;
+  }
+  .bg-overlay.off{opacity:0;} /* default Deep Forest shows its true colour */
+
+  .bg-btn{
+    position:fixed;
+    top:calc(env(safe-area-inset-top, 0px) + 12px);
+    right:calc(env(safe-area-inset-right, 0px) + 12px);
+    z-index:40;
+    width:44px;height:44px;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--paper-faint);
+    border-radius:50%;
+    background:rgba(12,10,8,0.45);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    color:var(--paper-dim);
+    font-family:'Space Mono',monospace;
+    font-size:1.2rem;line-height:1;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:border-color 0.25s ease, color 0.25s ease, background 0.25s ease, transform 0.15s ease;
+  }
+  .bg-btn[hidden]{display:none;}
+  .bg-btn .bg-ico{display:inline-block;transition:transform 0.6s ease;}
+  .bg-btn.spin .bg-ico{transform:rotate(360deg);}
+  .bg-btn:hover,.bg-btn:focus-visible{border-color:var(--brass);color:var(--paper);background:rgba(201,162,39,0.12);}
+  .bg-btn:active{transform:scale(0.92);}
+
+  /* photo inside the cards: gentle depth, driven by the existing scroll loop */
+  .photo-img{will-change:transform,opacity;}
+
+  @media (prefers-reduced-motion: reduce){
+    .bg-layer,.bg-overlay{transition-duration:0.01s;}
+    .bg-btn .bg-ico{transition:none;}
+  }
+
   @media (prefers-reduced-motion: reduce){
     .scroll-cue .line{animation:none;}
   }
 </style>
 </head>
 <body>
+
+<div class="bg-base" aria-hidden="true"></div>
+<div class="bg-layer" aria-hidden="true"></div>
+<div class="bg-layer" aria-hidden="true"></div>
+<div class="bg-overlay" id="bgOverlay" aria-hidden="true"></div>
+<button class="bg-btn" id="bgChange" type="button" aria-label="Change background" title="Change background" hidden><span class="bg-ico" aria-hidden="true">&#8635;</span></button>
 
 <section class="hero">
   <h1 class="hero-title">OUR STORY</h1>
@@ -369,6 +431,14 @@ function updateCards(){
   const drift = (1 - progress);
   cardA.style.transform = `translateY(${drift * -14}px) rotateY(${rot}deg) rotateZ(${drift * -5}deg)`;
   cardB.style.transform = `translateY(${drift * 14}px) rotateY(${-rot}deg) rotateZ(${drift * 5}deg)`;
+  if(!reduceMotion){
+    // photos: soft fade-in, slight rise and gentle parallax as the cards converge
+    const a = cardA.querySelector('.photo-img'), b = cardB.querySelector('.photo-img');
+    const op = 0.55 + 0.45 * Math.min(1, progress / 0.6);
+    const sc = 1.06 - 0.06 * progress;
+    if(a){ a.style.opacity = op; a.style.transform = `translateY(${drift * 5}px) scale(${sc})`; }
+    if(b){ b.style.opacity = op; b.style.transform = `translateY(${drift * -5}px) scale(${sc})`; }
+  }
   const qOpacity = Math.min(1, Math.max(0, (progress - 0.15) / 0.5));
   quote.style.opacity = qOpacity;
   quote.style.transform = `translateY(${(1 - qOpacity) * 14}px)`;
@@ -408,6 +478,101 @@ window.addEventListener('scroll', computeProgress, { passive: true });
 window.addEventListener('resize', setSvgSize);
 setSvgSize();
 requestAnimationFrame(loop);
+
+// ---- wallpaper changer (manifest: backgrounds.json) ----
+(function(){
+  const layers = Array.from(document.querySelectorAll('.bg-layer'));
+  const overlay = document.getElementById('bgOverlay');
+  const btn = document.getElementById('bgChange');
+  const ico = btn.querySelector('.bg-ico');
+  const KEY = 'bg_choice';
+  const FADE = 900;
+  let list = [];      // image URLs that exist (failed ones get removed)
+  let pos = -1;       // 0..list.length-1 = image, list.length = default Deep Forest
+  let active = -1;    // index of the layer currently showing an image
+  let busy = false;
+  const cache = new Map();
+
+  function preload(url){
+    if(!cache.has(url)){
+      cache.set(url, new Promise(res=>{
+        const im = new Image();
+        im.onload = ()=>res(true);
+        im.onerror = ()=>res(false);
+        im.src = url;
+      }));
+    }
+    return cache.get(url);
+  }
+  function save(v){ try{ localStorage.setItem(KEY, v); }catch(e){} }
+  function saved(){ try{ return localStorage.getItem(KEY); }catch(e){ return null; } }
+
+  function showDefault(){
+    layers.forEach(l=>l.classList.remove('on'));
+    overlay.classList.add('off');
+    active = -1;
+  }
+  function showImage(url){
+    const prev = active;
+    const nextIdx = prev === 0 ? 1 : 0;
+    const next = layers[nextIdx];
+    next.style.backgroundImage = 'url("' + url + '")';
+    // same z-index on both layers: the one later in the DOM paints on top,
+    // so the new image fades in over the old one (no dip to the base colour)
+    overlay.parentNode.insertBefore(next, overlay);
+    next.classList.add('on');
+    overlay.classList.remove('off');
+    active = nextIdx;
+    if(prev >= 0){
+      const old = layers[prev];
+      setTimeout(()=>{ if(layers.indexOf(old) !== active) old.classList.remove('on'); }, FADE + 60);
+    }
+  }
+
+  // go to position p (wraps), skipping any wallpaper that fails to load
+  async function goTo(p){
+    const n = list.length + 1;
+    for(let tries = 0; tries < n; tries++){
+      p = ((p % n) + n) % n;
+      if(p === list.length){ pos = p; showDefault(); save('default'); return; }
+      const ok = await preload(list[p]);
+      if(ok){ pos = p; showImage(list[p]); save(list[p]); return; }
+      list.splice(p,1); // broken file: drop it and try whatever is now at this spot
+      if(!list.length){ pos = 0; showDefault(); btn.hidden = true; return; }
+    }
+  }
+  function warm(){
+    if(!list.length) return;
+    const p = (pos + 1) % (list.length + 1);
+    if(p < list.length) preload(list[p]);
+  }
+
+  btn.addEventListener('click', async ()=>{
+    if(busy) return;
+    busy = true;
+    btn.classList.remove('spin'); void btn.offsetWidth; btn.classList.add('spin');
+    await goTo(pos + 1);
+    warm();
+    busy = false;
+  });
+  ico.addEventListener('transitionend', ()=>btn.classList.remove('spin'));
+
+  fetch('backgrounds.json', { cache:'no-cache' })
+    .then(r=> r.ok ? r.json() : Promise.reject())
+    .then(async data=>{
+      const names = Array.isArray(data) ? data : (data && data.backgrounds) || [];
+      list = names.filter(n=>typeof n === 'string' && n.trim()).map(n=>'backgrounds/' + n.trim());
+      if(!list.length) return;
+      btn.hidden = false;
+      const s = saved();
+      let start = 0;
+      if(s === 'default') start = list.length;
+      else if(s && list.indexOf(s) > -1) start = list.indexOf(s);
+      await goTo(start);
+      warm();
+    })
+    .catch(()=>{ /* no manifest: stay on default Deep Forest, button stays hidden */ });
+})();
 </script>
 </body>
 </html>
